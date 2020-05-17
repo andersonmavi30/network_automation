@@ -57,11 +57,11 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
        interfaces:
         - GigabitEthernet0/0
         - GigabitEthernet0/1
-		
+	
    - name: enable logging to all
       ios_logging:
        dest : on
-	
+    
    - name: configure interface
       ios_interface:
        name: GigabitEthernet0/2
@@ -69,4 +69,3 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
        speed: 1000
        duplex: half-duplex
        mtu: 512
-	
