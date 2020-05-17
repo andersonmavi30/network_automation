@@ -7,57 +7,66 @@
   tasks:
 
    - name: Add Banner
-
-    ios_banner:
-      banner: login
+      ios_banner:
+      banner: login
       text: |
-           ______       __      ___   _______________________ ____ 
-  / ___/ |     / /     /   | / ____/ ____/ ____/ ___// __ \
-  \__ \| | /| / /_____/ /| |/ /   / /   / __/  \__ \/ / / /
- ___/ /| |/ |/ /_____/ ___ / /___/ /___/ /___ ___/ / /_/ / 
-/____/ |__/|__/     /_/  |_\____/\____/_____//____/\____/  
-                                                           
+        
+ $$$$$$\  $$\      $$\         $$$$$$\   $$$$$$\   $$$$$$\  $$$$$$$$\  $$$$$$\   $$$$$$\  
+$$  __$$\ $$ | $\  $$ |       $$  __$$\ $$  __$$\ $$  __$$\ $$  _____|$$  __$$\ $$  __$$\ 
+$$ /  \__|$$ |$$$\ $$ |       $$ /  $$ |$$ /  \__|$$ /  \__|$$ |      $$ /  \__|$$ /  $$ |
+\$$$$$$\  $$ $$ $$\$$ |       $$$$$$$$ |$$ |      $$ |      $$$$$\    \$$$$$$\  $$ |  $$ |
+ \____$$\ $$$$  _$$$$ |       $$  __$$ |$$ |      $$ |      $$  __|    \____$$\ $$ |  $$ |
+$$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |$$ |  $$ |
+\$$$$$$  |$$  /   \$$ |       $$ |  $$ |\$$$$$$  |\$$$$$$  |$$$$$$$$\ \$$$$$$  | $$$$$$  |
+ \______/ \__/     \__|$$$$$$\\__|  \__| \______/  \______/ \________| \______/  \______/ 
+                       \______| 
+        
       state: present
 	  
    - name: create a new user
-   
-    ios_user:
-      name: anderson.martinez
-      nopassword: True
-      sshkey: "cisco"
-      state: present
-
+      ios_user:
+       name: anderson.martinez
+       nopassword: True
+       sshkey: "cisco"
+       state: present
+      
    - name: configure hostname and domain name
- 
-	ios_system:
-      hostname: sw_acceso
-      domain_name: www.cloudflare.com
-      domain_search:
+      ios_system:
+       hostname: sw_acceso
+       domain_name: www.cloudflare.com
+       domain_search:
         - ansible.com
         - redhat.com
         - cisco.com
-   
-   - name: configure name servers
-   
-    ios_system:
-      name_servers:
-      - 1.1.1.1
-      - 8.8.8.8
+        
+    name: configure name servers
+      ios_system:
+       name_servers:
+        - 1.1.1.1
+        - 8.8.8.8
 	  
    - name: Create vlan
       ios_vlan:
-      vlan_id: 100
-      name: test-vlan
-      state: present
+       vlan_id: 100
+       name: test-vlan
+       state: present
 
    - name: Add interfaces to VLAN
       ios_vlan:
-      vlan_id: 100
-      interfaces:
+       vlan_id: 100
+       interfaces:
         - GigabitEthernet0/0
         - GigabitEthernet0/1
 		
    - name: enable logging to all
       ios_logging:
-      dest : on
+       dest : on
+	
+   - name: configure interface
+      ios_interface:
+       name: GigabitEthernet0/2
+       description: TRUNK_SW_CORE
+       speed: 1000
+       duplex: half-duplex
+       mtu: 512
 	
