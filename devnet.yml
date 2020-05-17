@@ -22,7 +22,7 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
                        \______| 
         
       state: present
-	  
+	
    - name: create a new user
       ios_user:
        name: anderson.martinez
@@ -44,7 +44,7 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
        name_servers:
         - 1.1.1.1
         - 8.8.8.8
-	  
+	
    - name: Create vlan
       ios_vlan:
        vlan_id: 100
@@ -57,7 +57,7 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
        interfaces:
         - GigabitEthernet0/0
         - GigabitEthernet0/1
-	
+
    - name: enable logging to all
       ios_logging:
        dest : on
