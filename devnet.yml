@@ -1,0 +1,63 @@
+---
+
+- name: General Config
+
+  hosts: devnetswacceso
+
+  tasks:
+
+   - name: Add Banner
+
+    ios_banner:
+      banner: login
+      text: |
+           ______       __      ___   _______________________ ____ 
+  / ___/ |     / /     /   | / ____/ ____/ ____/ ___// __ \
+  \__ \| | /| / /_____/ /| |/ /   / /   / __/  \__ \/ / / /
+ ___/ /| |/ |/ /_____/ ___ / /___/ /___/ /___ ___/ / /_/ / 
+/____/ |__/|__/     /_/  |_\____/\____/_____//____/\____/  
+                                                           
+      state: present
+	  
+   - name: create a new user
+   
+    ios_user:
+      name: anderson.martinez
+      nopassword: True
+      sshkey: "cisco"
+      state: present
+
+   - name: configure hostname and domain name
+ 
+	ios_system:
+      hostname: sw_acceso
+      domain_name: www.cloudflare.com
+      domain_search:
+        - ansible.com
+        - redhat.com
+        - cisco.com
+   
+   - name: configure name servers
+   
+    ios_system:
+      name_servers:
+      - 1.1.1.1
+      - 8.8.8.8
+	  
+   - name: Create vlan
+      ios_vlan:
+      vlan_id: 100
+      name: test-vlan
+      state: present
+
+   - name: Add interfaces to VLAN
+      ios_vlan:
+      vlan_id: 100
+      interfaces:
+        - GigabitEthernet0/0
+        - GigabitEthernet0/1
+		
+   - name: enable logging to all
+      ios_logging:
+      dest : on
+	
