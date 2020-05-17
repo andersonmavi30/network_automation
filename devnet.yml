@@ -69,3 +69,7 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
        speed: 1000
        duplex: half-duplex
        mtu: 512
+
+   - name: Add loopback
+       name: loopback 30
+       state: present
