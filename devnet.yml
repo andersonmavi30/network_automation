@@ -2,7 +2,7 @@
 
 - name: General Config
 
-  hosts: devnetswacceso
+  hosts: Switches
 
   tasks:
 
@@ -25,7 +25,19 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
 
    - name: create a new user
       ios_user:
-       name: anderson.martinez
+       name: angie.martinez
+       nopassword: True
+       sshkey: "cisco"
+       state: present
+   - name: create a new user
+      ios_user:
+       name: lorena.rodriguez
+       nopassword: True
+       sshkey: "cisco"
+       state: present
+   - name: create a new user
+      ios_user:
+       name: maritza.virviescas
        nopassword: True
        sshkey: "cisco"
        state: present
@@ -47,16 +59,16 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
 
    - name: Create vlan
       ios_vlan:
-       vlan_id: 100
-       name: test-vlan
+       vlan_id: 200
+       name: ANSIBLE
        state: present
 
    - name: Add interfaces to VLAN
       ios_vlan:
-       vlan_id: 100
+       vlan_id: 200
        interfaces:
-        - GigabitEthernet0/0
-        - GigabitEthernet0/1
+        - GigabitEthernet1/0
+        - GigabitEthernet1/1
 
    - name: enable logging to all
       ios_logging:
@@ -64,8 +76,15 @@ $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |
     
    - name: configure interface
       ios_interface:
-       name: GigabitEthernet0/2
-       description: TRUNK_SW_CORE
+       name: GigabitEthernet1/0
+       description: to_Users
+       speed: 1000
+       duplex: half-duplex
+       mtu: 512
+   - name: configure interface
+      ios_interface:
+       name: GigabitEthernet1/1
+       description: to_Users
        speed: 1000
        duplex: half-duplex
        mtu: 512
