@@ -1,0 +1,19 @@
+---
+
+- name: General Config
+
+  hosts: Routers
+
+  tasks:
+
+   - name: Add Banner
+     ios_banner:
+      banner: login
+      text: |
+       Network Automation with Ansible by Anderson
+      state: present
+   
+   - name: Add loopback
+     ios_interface:
+       name: Loopback99
+       state: present
