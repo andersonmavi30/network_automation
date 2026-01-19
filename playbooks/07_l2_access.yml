@@ -1,0 +1,55 @@
+---
+- name: L2 Access baseline (VLANs + access ports)
+  hosts: Switches
+  gather_facts: false
+  collections:
+    - cisco.ios
+
+  vars:
+    vlans:
+      - { id: 10, name: USERS }
+      - { id: 20, name: VOICE }
+      - { id: 99, name: MGMT }
+
+    access_ports:
+      - { ifname: GigabitEthernet1/0, access_vlan: 10, voice_vlan: 20, desc: "User_Port_1" }
+      - { ifname: GigabitEthernet1/1, access_vlan: 10, voice_vlan: 20, desc: "User_Port_2" }
+
+    trunk_ports:
+      - { ifname: GigabitEthernet1/48, allowed_vlans: "10,20,99", desc: "Uplink_Trunk" }
+
+  tasks:
+    - name: Create VLANs
+      ios_vlan:
+        vlan_id: "{{ item.id }}"
+        name: "{{ item.name }}"
+        state: active
+      loop: "{{ vlans }}"
+
+    - name: Configure access ports (access + voice + STP + port-security)
+      ios_config:
+        parents: "interface {{ item.ifname }}"
+        lines:
+          - "description {{ item.desc }}"
+          - "switchport mode access"
+          - "switchport access vlan {{ item.access_vlan }}"
+          - "switchport voice vlan {{ item.voice_vlan }}"
+          - "spanning-tree portfast"
+          - "spanning-tree bpduguard enable"
+          - "switchport port-security"
+          - "switchport port-security maximum 2"
+          - "switchport port-security violation restrict"
+          - "switchport port-security mac-address sticky"
+      loop: "{{ access_ports }}"
+      save_when: modified
+
+    - name: Configure trunk ports
+      ios_config:
+        parents: "interface {{ item.ifname }}"
+        lines:
+          - "description {{ item.desc }}"
+          - "switchport mode trunk"
+          - "switchport trunk allowed vlan {{ item.allowed_vlans }}"
+      loop: "{{ trunk_ports }}"
+      save_when: modified
+
