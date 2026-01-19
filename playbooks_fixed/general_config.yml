@@ -1,0 +1,108 @@
+---
+- name: General Config
+  hosts: Switches
+  gather_facts: false
+  collections:
+  - cisco.ios
+
+  vars:
+    banner_text: |
+      
+      $$$$$$\  $$\      $$\         $$$$$$\   $$$$$$\   $$$$$$\  $$$$$$$$\  $$$$$$\   $$$$$$\  
+      $$  __$$\ $$ | $\  $$ |       $$  __$$\ $$  __$$\ $$  __$$\ $$  _____|$$  __$$\ $$  __$$\ 
+      $$ /  \__|$$ |$$$\ $$ |       $$ /  $$ |$$ /  \__|$$ /  \__|$$ |      $$ /  \__|$$ /  $$ |
+      \$$$$$$\  $$ $$ $$\$$ |       $$$$$$$$ |$$ |      $$ |      $$$$$\    \$$$$$$\  $$ |  $$ |
+       \____$$\ $$$$  _$$$$ |       $$  __$$ |$$ |      $$ |      $$  __|    \____$$\ $$ |  $$ |
+      $$\   $$ |$$$  / \$$$ |       $$ |  $$ |$$ |  $$\ $$ |  $$\ $$ |      $$\   $$ |$$ |  $$ |
+      \$$$$$$  |$$  /   \$$ |       $$ |  $$ |\$$$$$$  |\$$$$$$  |$$$$$$$$\ \$$$$$$  | $$$$$$  |
+       \______/ \__/     \__|$$$$$$\\__|  \__| \______/  \______/ \________| \______/  \______/ 
+                             \______| 
+
+    users:
+    - username: angie.martinez
+      sshkey_file: "keys/angie.martinez.pub"
+    - username: lorena.rodriguez
+      sshkey_file: "keys/lorena.rodriguez.pub"
+    - username: maritza.virviescas
+      sshkey_file: "keys/maritza.virviescas.pub"
+
+    access_vlan_id: 200
+    access_vlan_name: ANSIBLE
+    access_vlan_interfaces:
+    - GigabitEthernet1/0
+    - GigabitEthernet1/1
+
+    access_ports:
+    - ifname: GigabitEthernet1/0
+      description: to_Users
+      speed: 1000
+      duplex: half
+      mtu: 512
+    - ifname: GigabitEthernet1/1
+      description: to_Users
+      speed: 1000
+      duplex: half
+      mtu: 512
+
+    dns_servers:
+    - 1.1.1.1
+    - 8.8.8.8
+
+  tasks:
+  - name: Add Banner
+    ios_banner:
+      banner: login
+      text: "{{ banner_text }}"
+      state: present
+
+  - name: Create local users (SSH key from file)
+    ios_user:
+      name: "{{ item.username }}"
+      nopassword: true
+      sshkey: "{{ lookup('file', item.sshkey_file) }}"
+      state: present
+    loop: "{{ users }}"
+
+  - name: Configure hostname and domain name
+    ios_system:
+      hostname: sw_acceso
+      domain_name: soc.local
+      domain_search:
+      - ansible.com
+      - redhat.com
+      - cisco.com
+
+  - name: Configure name servers
+    ios_system:
+      name_servers: "{{ dns_servers }}"
+
+  - name: Create VLAN
+    ios_vlan:
+      vlan_id: "{{ access_vlan_id }}"
+      name: "{{ access_vlan_name }}"
+      state: active
+
+  - name: Add interfaces to VLAN
+    ios_vlan:
+      vlan_id: "{{ access_vlan_id }}"
+      interfaces: "{{ access_vlan_interfaces }}"
+
+  - name: Enable logging (buffered)
+    ios_logging:
+      dest: buffered
+      level: informational
+
+  - name: Configure access interfaces
+    ios_interface:
+      name: "{{ item.ifname }}"
+      description: "{{ item.description }}"
+      speed: "{{ item.speed }}"
+      duplex: "{{ item.duplex }}"
+      mtu: "{{ item.mtu }}"
+    loop: "{{ access_ports }}"
+
+  - name: Add Loopback30
+    ios_interface:
+      name: Loopback30
+      description: mgmt_loopback
+      enabled: true
