@@ -1,0 +1,28 @@
+---
+- name: Restore config from local backup file (Cisco IOS)
+  hosts: Switches
+  gather_facts: false
+  collections:
+    - cisco.ios
+
+  vars:
+    # Ejemplo:
+    # restore_file: "backups/sw1/running-config_20260118-120000.txt"
+    restore_file: ""
+
+  tasks:
+    - name: Fail if restore_file is empty
+      ansible.builtin.fail:
+        msg: "Define la variable restore_file con la ruta del archivo de backup a restaurar."
+      when: restore_file | length == 0
+
+    - name: Load backup file content (local)
+      ansible.builtin.set_fact:
+        restore_cfg: "{{ lookup('file', restore_file) }}"
+      delegate_to: localhost
+
+    - name: Push config to device (replace-like by lines)
+      ios_config:
+        lines: "{{ restore_cfg.splitlines() }}"
+        save_when: modified
+
