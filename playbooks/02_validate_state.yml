@@ -1,0 +1,44 @@
+---
+- name: Validate operational state (Cisco IOS)
+  hosts: Switches
+  gather_facts: false
+  collections:
+    - cisco.ios
+
+  vars:
+    validation_commands:
+      - show version
+      - show inventory
+      - show ip interface brief
+      - show vlan brief
+      - show interfaces status
+      - show logging | include %SYS|%SEC|%LINK|%LINEPROTO
+
+  tasks:
+    - name: Run validation commands
+      ios_command:
+        commands: "{{ validation_commands }}"
+      register: validate_out
+
+    - name: Ensure local reports folder exists
+      ansible.builtin.file:
+        path: "reports"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+
+    - name: Save validation output locally (per device)
+      ansible.builtin.copy:
+        content: |
+          ### DEVICE: {{ inventory_hostname }}
+          ### DATE: {{ lookup('pipe', 'date +%Y-%m-%d %H:%M:%S') }}
+
+          {% for i in range(validation_commands | length) %}
+          ===== COMMAND: {{ validation_commands[i] }} =====
+          {{ validate_out.stdout[i] }}
+
+          {% endfor %}
+        dest: "reports/{{ inventory_hostname }}_validate_state.txt"
+        mode: "0644"
+      delegate_to: localhost
+
