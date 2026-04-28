@@ -1,0 +1,17 @@
+{% for trunk in trunks %}
+{% if inventory_hostname == trunk.local_device %}
+interface {{ trunk.local_interface }}
+ description TRUNK_TO_{{ trunk.remote_device }}
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan {{ trunk.allowed_vlans | join(',') }}
+ no shutdown
+{% elif inventory_hostname == trunk.remote_device %}
+interface {{ trunk.remote_interface }}
+ description TRUNK_TO_{{ trunk.local_device }}
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan {{ trunk.allowed_vlans | join(',') }}
+ no shutdown
+{% endif %}
+{% endfor %}

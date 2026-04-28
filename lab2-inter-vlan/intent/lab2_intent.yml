@@ -1,0 +1,119 @@
+lab:
+  name: lab2-inter-vlan
+  description: Inter-VLAN Routing Automation using Ansible, Jinja2, Nornir, pyATS and Git
+
+management:
+  vlan_id: 99
+  network: 172.30.30.0/26
+  gateway_required: false
+  devices:
+    SW_DMZ:
+      mgmt_ip: 172.30.30.40
+    DSW1:
+      mgmt_ip: 172.30.30.41
+    ASW1:
+      mgmt_ip: 172.30.30.43
+    ASW2:
+      mgmt_ip: 172.30.30.44
+
+vlans:
+- id: 10
+  name: VLAN10_USERS
+  subnet: 10.10.10.0/24
+  gateway: 10.10.10.254
+
+- id: 20
+  name: VLAN20_USERS
+  subnet: 10.10.20.0/24
+  gateway: 10.10.20.254
+
+- id: 30
+  name: VLAN30_USERS
+  subnet: 10.10.30.0/24
+  gateway: 10.10.30.254
+
+- id: 40
+  name: VLAN40_USERS
+  subnet: 10.10.40.0/24
+  gateway: 10.10.40.254
+
+l3_gateway:
+  device: DSW1
+  enable_ip_routing: true
+  svi_vlans:
+  - 10
+  - 20
+  - 30
+  - 40
+
+trunks:
+- local_device: DSW1
+  local_interface: GigabitEthernet2/0
+  remote_device: ASW1
+  remote_interface: GigabitEthernet2/0
+  allowed_vlans:
+  - 10
+  - 20
+  - 30
+  - 40
+
+- local_device: DSW1
+  local_interface: GigabitEthernet1/3
+  remote_device: ASW2
+  remote_interface: GigabitEthernet2/0
+  allowed_vlans:
+  - 10
+  - 20
+  - 30
+  - 40
+
+access_ports:
+  ASW1:
+  - interface: GigabitEthernet0/0
+    vlan: 10
+    host_ip: 10.10.10.1
+
+  - interface: GigabitEthernet0/2
+    vlan: 20
+    host_ip: 10.10.20.2
+
+  - interface: GigabitEthernet0/1
+    vlan: 30
+    host_ip: 10.10.30.1
+
+  - interface: GigabitEthernet0/3
+    vlan: 40
+    host_ip: 10.10.40.2
+
+  ASW2:
+  - interface: GigabitEthernet0/2
+    vlan: 10
+    host_ip: 10.10.10.2
+
+  - interface: GigabitEthernet0/0
+    vlan: 20
+    host_ip: 10.10.20.1
+
+  - interface: GigabitEthernet0/3
+    vlan: 30
+    host_ip: 10.10.30.2
+
+  - interface: GigabitEthernet0/1
+    vlan: 40
+    host_ip: 10.10.40.1
+
+automation_flow:
+  source_of_truth: Git
+  intent: YAML
+  config_rendering: Jinja2
+  deployment: Ansible
+  collection: Nornir
+  validation: pyATS_Genie
+  evidence: artifacts
+
+notes:
+  vlan_99_already_configured: true
+  management_svi_already_configured: true
+  default_gateway_not_required_for_mgmt: true
+  dhcp_to_be_added_later: true
+  acl_to_be_added_later: true

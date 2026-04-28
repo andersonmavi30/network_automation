@@ -1,0 +1,9 @@
+{% if inventory_hostname == l3_gateway.device %}
+ip routing
+{% for vlan in vlans %}
+interface Vlan{{ vlan.id }}
+ description Gateway {{ vlan.name }}
+ ip address {{ vlan.gateway }} 255.255.255.0
+ no shutdown
+{% endfor %}
+{% endif %}

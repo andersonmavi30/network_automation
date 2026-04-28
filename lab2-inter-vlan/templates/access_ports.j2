@@ -1,0 +1,10 @@
+{% if inventory_hostname in access_ports %}
+{% for port in access_ports[inventory_hostname] %}
+interface {{ port.interface }}
+ description ACCESS_VLAN_{{ port.vlan }}_HOST_{{ port.host_ip }}
+ switchport mode access
+ switchport access vlan {{ port.vlan }}
+ spanning-tree portfast
+ no shutdown
+{% endfor %}
+{% endif %}
