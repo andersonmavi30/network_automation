@@ -1,5 +1,5 @@
-{% if inventory_hostname in access_ports %}
-{% for port in access_ports[inventory_hostname] %}
+{% if device_name in lab2.access_ports %}
+{% for port in lab2.access_ports[device_name] %}
 interface {{ port.interface }}
  description ACCESS_VLAN_{{ port.vlan }}_HOST_{{ port.host_ip }}
  switchport mode access

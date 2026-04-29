@@ -1,9 +1,13 @@
-{% if inventory_hostname == l3_gateway.device %}
+{% if device_name == lab2.l3_gateway.device %}
+{% if lab2.l3_gateway.enable_ip_routing %}
 ip routing
-{% for vlan in vlans %}
+{% endif %}
+{% for vlan in lab2.vlans %}
+{% if vlan.id in lab2.l3_gateway.svi_vlans %}
 interface Vlan{{ vlan.id }}
  description Gateway {{ vlan.name }}
  ip address {{ vlan.gateway }} 255.255.255.0
  no shutdown
+{% endif %}
 {% endfor %}
 {% endif %}

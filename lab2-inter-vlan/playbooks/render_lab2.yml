@@ -1,0 +1,34 @@
+---
+- name: Render Lab 2 configurations
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    lab_root: "{{ playbook_dir }}/.."
+    intent_file: "{{ lab_root }}/intent/lab2_intent.yml"
+    rendered_dir: "{{ lab_root }}/artifacts/rendered"
+
+  tasks:
+    - name: Load Lab 2 intent file
+      ansible.builtin.include_vars:
+        file: "{{ intent_file }}"
+        name: lab2
+
+    - name: Create rendered artifacts directory
+      ansible.builtin.file:
+        path: "{{ rendered_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Render one configuration file per device
+      ansible.builtin.template:
+        src: "{{ lab_root }}/templates/device_config.j2"
+        dest: "{{ rendered_dir }}/{{ item }}.cfg"
+        mode: "0644"
+      loop:
+        - DSW1
+        - ASW1
+        - ASW2
+        - SW_DMZ
+      vars:
+        device_name: "{{ item }}"
