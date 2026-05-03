@@ -1,0 +1,14 @@
+Interface              IP-Address      OK? Method Status                Protocol
+Ethernet0/0            unassigned      YES unset  down                  down    
+Ethernet0/1            unassigned      YES unset  down                  down    
+Ethernet0/2            unassigned      YES unset  up                    up      
+Ethernet0/3            unassigned      YES unset  up                    up      
+Ethernet1/0            unassigned      YES unset  up                    up      
+Ethernet1/1            unassigned      YES unset  down                  down    
+Ethernet1/2            unassigned      YES unset  down                  down    
+Ethernet1/3            unassigned      YES unset  down                  down    
+Ethernet2/0            unassigned      YES unset  down                  down    
+Ethernet2/1            unassigned      YES unset  down                  down    
+Ethernet2/2            unassigned      YES unset  down                  down    
+Ethernet2/3            unassigned      YES unset  up                    up      
+Vlan99                 172.30.30.40    YES NVRAM  up                    up

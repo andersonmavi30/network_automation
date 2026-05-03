@@ -1,0 +1,68 @@
+---
+- name: Lab 2 post-check collection
+  hosts: lab2_switches
+  gather_facts: false
+
+  vars:
+    artifacts_dir: "{{ playbook_dir }}/../artifacts/postcheck"
+
+  tasks:
+    - name: Create post-check artifacts directory
+      ansible.builtin.file:
+        path: "{{ artifacts_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Collect VLAN status
+      cisco.ios.ios_command:
+        commands:
+          - show vlan brief
+      register: vlan_output
+
+    - name: Save VLAN status
+      ansible.builtin.copy:
+        content: "{{ vlan_output.stdout[0] }}"
+        dest: "{{ artifacts_dir }}/{{ inventory_hostname }}_show_vlan_brief.txt"
+        mode: "0644"
+      delegate_to: localhost
+
+    - name: Collect trunk status
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces trunk
+      register: trunk_output
+
+    - name: Save trunk status
+      ansible.builtin.copy:
+        content: "{{ trunk_output.stdout[0] }}"
+        dest: "{{ artifacts_dir }}/{{ inventory_hostname }}_show_interfaces_trunk.txt"
+        mode: "0644"
+      delegate_to: localhost
+
+    - name: Collect IP interface status
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+      register: ip_int_output
+
+    - name: Save IP interface status
+      ansible.builtin.copy:
+        content: "{{ ip_int_output.stdout[0] }}"
+        dest: "{{ artifacts_dir }}/{{ inventory_hostname }}_show_ip_interface_brief.txt"
+        mode: "0644"
+      delegate_to: localhost
+
+    - name: Collect running configuration
+      cisco.ios.ios_command:
+        commands:
+          - show running-config
+      register: running_config_output
+
+    - name: Save running configuration
+      ansible.builtin.copy:
+        content: "{{ running_config_output.stdout[0] }}"
+        dest: "{{ artifacts_dir }}/{{ inventory_hostname }}_show_running_config.txt"
+        mode: "0644"
+      delegate_to: localhost
