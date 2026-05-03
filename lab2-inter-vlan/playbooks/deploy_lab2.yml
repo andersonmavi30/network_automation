@@ -1,0 +1,13 @@
+---
+- name: Lab 2 deploy rendered configuration
+  hosts: lab2_switches
+  gather_facts: false
+
+  vars:
+    rendered_dir: "{{ playbook_dir }}/../artifacts/rendered"
+
+  tasks:
+    - name: Deploy rendered configuration to switches
+      cisco.ios.ios_config:
+        src: "{{ rendered_dir }}/{{ inventory_hostname }}.cfg"
+        save_when: modified
