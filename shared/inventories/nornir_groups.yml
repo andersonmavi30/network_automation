@@ -1,0 +1,9 @@
+---
+cisco_ios:
+  platform: cisco_ios
+  username: netdevops
+  password: cisco
+  connection_options:
+    netmiko:
+      extras:
+        secret: cisco
