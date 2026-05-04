@@ -1,0 +1,20 @@
+---
+DSW1:
+  hostname: 172.30.30.41
+  groups:
+    - cisco_ios
+
+ASW1:
+  hostname: 172.30.30.43
+  groups:
+    - cisco_ios
+
+ASW2:
+  hostname: 172.30.30.44
+  groups:
+    - cisco_ios
+
+SW_DMZ:
+  hostname: 172.30.30.40
+  groups:
+    - cisco_ios

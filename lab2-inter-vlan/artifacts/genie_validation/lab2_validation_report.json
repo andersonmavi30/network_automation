@@ -1,0 +1,48 @@
+{
+  "vlans": {
+    "DSW1": {
+      "status": "PASS",
+      "missing_vlans": []
+    },
+    "ASW1": {
+      "status": "PASS",
+      "missing_vlans": []
+    },
+    "ASW2": {
+      "status": "PASS",
+      "missing_vlans": []
+    },
+    "SW_DMZ": {
+      "status": "PASS",
+      "missing_vlans": []
+    }
+  },
+  "svis": {
+    "DSW1": {
+      "status": "PASS",
+      "missing_svis": [],
+      "not_up_svis": []
+    }
+  },
+  "trunks": {
+    "DSW1": {
+      "status": "PASS",
+      "has_trunk_output": true,
+      "has_allowed_vlans_10_20_30_40": true
+    },
+    "ASW1": {
+      "status": "PASS",
+      "has_trunk_output": true,
+      "has_allowed_vlans_10_20_30_40": true
+    },
+    "ASW2": {
+      "status": "PASS",
+      "has_trunk_output": true,
+      "has_allowed_vlans_10_20_30_40": true
+    },
+    "SW_DMZ": {
+      "status": "PASS",
+      "note": "SW_DMZ should not have trunks in this lab"
+    }
+  }
+}
