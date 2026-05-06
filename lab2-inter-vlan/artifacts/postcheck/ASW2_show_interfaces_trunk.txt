@@ -2,10 +2,10 @@ Port        Mode             Encapsulation  Status        Native vlan
 Gi2/0       on               802.1q         trunking      1
 
 Port        Vlans allowed on trunk
-Gi2/0       10,20,30,40
+Gi2/0       10,20,30,40,70,80,90
 
 Port        Vlans allowed and active in management domain
-Gi2/0       10,20,30,40
+Gi2/0       10,20,30,40,70,80,90
 
 Port        Vlans in spanning tree forwarding state and not pruned
-Gi2/0       10,20,30,40
+Gi2/0       10,20,30,40,70,80
