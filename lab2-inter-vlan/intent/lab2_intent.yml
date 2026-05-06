@@ -1,3 +1,4 @@
+---
 lab:
   name: lab2-inter-vlan
   description: Inter-VLAN Routing Automation using Ansible, Jinja2, Nornir, pyATS and Git
@@ -37,6 +38,11 @@ vlans:
   subnet: 10.10.40.0/24
   gateway: 10.10.40.254
 
+- id: 70
+  name: VLAN70_SERVERS
+  subnet: 10.10.70.0/24
+  gateway: 10.10.70.254
+
 l3_gateway:
   device: DSW1
   enable_ip_routing: true
@@ -45,6 +51,7 @@ l3_gateway:
   - 20
   - 30
   - 40
+  - 70
 
 trunks:
 - local_device: DSW1
@@ -56,6 +63,7 @@ trunks:
   - 20
   - 30
   - 40
+  - 70
 
 - local_device: DSW1
   local_interface: GigabitEthernet1/3
@@ -66,6 +74,7 @@ trunks:
   - 20
   - 30
   - 40
+  - 70
 
 access_ports:
   ASW1:

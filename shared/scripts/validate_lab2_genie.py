@@ -10,9 +10,9 @@ NORNIR_DIR = BASE_DIR / "lab2-inter-vlan" / "artifacts" / "nornir"
 REPORT_DIR = BASE_DIR / "lab2-inter-vlan" / "artifacts" / "genie_validation"
 REPORT_FILE = REPORT_DIR / "lab2_validation_report.json"
 
-EXPECTED_VLANS = ["10", "20", "30", "40"]
+EXPECTED_VLANS = ["10", "20", "30", "40", "70"]
 L3_DEVICE = "DSW1"
-EXPECTED_SVIS = ["Vlan10", "Vlan20", "Vlan30", "Vlan40"]
+EXPECTED_SVIS = ["Vlan10", "Vlan20", "Vlan30", "Vlan40", "Vlan70"]
 
 DEVICES = ["DSW1", "ASW1", "ASW2", "SW_DMZ"]
 
@@ -42,7 +42,12 @@ def validate_vlans(device_name):
 
 
 def validate_svis():
-    parsed = parse_output(L3_DEVICE, "show ip interface brief", "show_ip_interface_brief.txt")
+    parsed = parse_output(
+        L3_DEVICE,
+        "show ip interface brief",
+        "show_ip_interface_brief.txt"
+    )
+
     interfaces = parsed.get("interface", {})
 
     missing = []
@@ -81,12 +86,17 @@ def validate_trunks(device_name):
         }
 
     has_trunk_output = bool(output.strip())
-    has_allowed_vlans = "10,20,30,40" in output.replace(" ", "")
+    clean_output = output.replace(" ", "")
+
+    has_expected_vlans = (
+        "10,20,30,40,70" in clean_output
+        or "10,20,30,40" in clean_output and "70" in clean_output
+    )
 
     return {
-        "status": "PASS" if has_trunk_output and has_allowed_vlans else "FAIL",
+        "status": "PASS" if has_trunk_output and has_expected_vlans else "FAIL",
         "has_trunk_output": has_trunk_output,
-        "has_allowed_vlans_10_20_30_40": has_allowed_vlans,
+        "has_allowed_vlans_10_20_30_40_70": has_expected_vlans,
     }
 
 
