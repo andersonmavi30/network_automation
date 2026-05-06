@@ -43,6 +43,11 @@ vlans:
   subnet: 10.10.70.0/24
   gateway: 10.10.70.254
 
+- id: 80
+  name: SERVERS_LINUX
+  subnet: 10.10.80.0/24
+  gateway: 10.10.80.254
+
 l3_gateway:
   device: DSW1
   enable_ip_routing: true
@@ -52,6 +57,7 @@ l3_gateway:
   - 30
   - 40
   - 70
+  - 80
 
 trunks:
 - local_device: DSW1
@@ -64,6 +70,7 @@ trunks:
   - 30
   - 40
   - 70
+  - 80
 
 - local_device: DSW1
   local_interface: GigabitEthernet1/3
@@ -75,6 +82,7 @@ trunks:
   - 30
   - 40
   - 70
+  - 80
 
 access_ports:
   ASW1:

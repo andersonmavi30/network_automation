@@ -10,9 +10,10 @@ NORNIR_DIR = BASE_DIR / "lab2-inter-vlan" / "artifacts" / "nornir"
 REPORT_DIR = BASE_DIR / "lab2-inter-vlan" / "artifacts" / "genie_validation"
 REPORT_FILE = REPORT_DIR / "lab2_validation_report.json"
 
-EXPECTED_VLANS = ["10", "20", "30", "40", "70"]
+EXPECTED_VLANS = ["10", "20", "30", "40", "70", "80"]
 L3_DEVICE = "DSW1"
-EXPECTED_SVIS = ["Vlan10", "Vlan20", "Vlan30", "Vlan40", "Vlan70"]
+EXPECTED_SVIS = ["Vlan10", "Vlan20", "Vlan30", "Vlan40", "Vlan70", "Vlan80"]
+EXPECTED_ALLOWED_VLANS = "10,20,30,40,70,80"
 
 DEVICES = ["DSW1", "ASW1", "ASW2", "SW_DMZ"]
 
@@ -88,15 +89,13 @@ def validate_trunks(device_name):
     has_trunk_output = bool(output.strip())
     clean_output = output.replace(" ", "")
 
-    has_expected_vlans = (
-        "10,20,30,40,70" in clean_output
-        or "10,20,30,40" in clean_output and "70" in clean_output
-    )
+    has_expected_vlans = EXPECTED_ALLOWED_VLANS in clean_output
 
     return {
         "status": "PASS" if has_trunk_output and has_expected_vlans else "FAIL",
         "has_trunk_output": has_trunk_output,
-        "has_allowed_vlans_10_20_30_40_70": has_expected_vlans,
+        "expected_allowed_vlans": EXPECTED_ALLOWED_VLANS,
+        "has_allowed_vlans_10_20_30_40_70_80": has_expected_vlans,
     }
 
 
