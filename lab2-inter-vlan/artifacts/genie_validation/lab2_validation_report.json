@@ -28,17 +28,20 @@
     "DSW1": {
       "status": "PASS",
       "has_trunk_output": true,
-      "has_allowed_vlans_10_20_30_40_70": true
+      "expected_allowed_vlans": "10,20,30,40,70,80",
+      "has_allowed_vlans_10_20_30_40_70_80": true
     },
     "ASW1": {
       "status": "PASS",
       "has_trunk_output": true,
-      "has_allowed_vlans_10_20_30_40_70": true
+      "expected_allowed_vlans": "10,20,30,40,70,80",
+      "has_allowed_vlans_10_20_30_40_70_80": true
     },
     "ASW2": {
       "status": "PASS",
       "has_trunk_output": true,
-      "has_allowed_vlans_10_20_30_40_70": true
+      "expected_allowed_vlans": "10,20,30,40,70,80",
+      "has_allowed_vlans_10_20_30_40_70_80": true
     },
     "SW_DMZ": {
       "status": "PASS",
