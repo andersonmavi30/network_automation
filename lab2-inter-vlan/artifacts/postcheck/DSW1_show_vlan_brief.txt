@@ -5,6 +5,9 @@ VLAN Name                             Status    Ports
 20   VLAN20_USERS                     active    
 30   VLAN30_USERS                     active    
 40   VLAN40_USERS                     active    
+70   VLAN70_SERVERS                   active    
+80   SERVERS_WINDOWS                  active    
+90   SERVERS_LINUX                    active    
 99   MGMT                             active    Gi2/1
 1002 fddi-default                     act/unsup 
 1003 token-ring-default               act/unsup 

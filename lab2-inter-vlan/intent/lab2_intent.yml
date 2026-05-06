@@ -44,9 +44,14 @@ vlans:
   gateway: 10.10.70.254
 
 - id: 80
-  name: SERVERS_LINUX
+  name: SERVERS_WINDOWS
   subnet: 10.10.80.0/24
   gateway: 10.10.80.254
+
+- id: 90
+  name: SERVERS_LINUX
+  subnet: 10.10.90.0/24
+  gateway: 10.10.90.254
 
 l3_gateway:
   device: DSW1
@@ -58,6 +63,7 @@ l3_gateway:
   - 40
   - 70
   - 80
+  - 90
 
 trunks:
 - local_device: DSW1
@@ -71,6 +77,7 @@ trunks:
   - 40
   - 70
   - 80
+  - 90
 
 - local_device: DSW1
   local_interface: GigabitEthernet1/3
@@ -83,6 +90,7 @@ trunks:
   - 40
   - 70
   - 80
+  - 90
 
 access_ports:
   ASW1:

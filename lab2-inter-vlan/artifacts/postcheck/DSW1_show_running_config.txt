@@ -1,8 +1,8 @@
 Building configuration...
 
-Current configuration : 3849 bytes
+Current configuration : 4149 bytes
 !
-! Last configuration change at 01:34:15 UTC Sun May 3 2026 by netdevops
+! Last configuration change at 23:39:45 UTC Wed May 6 2026 by netdevops
 !
 version 15.2
 service timestamps debug datetime msec
@@ -74,14 +74,14 @@ interface GigabitEthernet1/2
 !
 interface GigabitEthernet1/3
  description TRUNK_TO_ASW2
- switchport trunk allowed vlan 10,20,30,40
+ switchport trunk allowed vlan 10,20,30,40,70,80,90
  switchport trunk encapsulation dot1q
  switchport mode trunk
  negotiation auto
 !
 interface GigabitEthernet2/0
  description TRUNK_TO_ASW1
- switchport trunk allowed vlan 10,20,30,40
+ switchport trunk allowed vlan 10,20,30,40,70,80,90
  switchport trunk encapsulation dot1q
  switchport mode trunk
  negotiation auto
@@ -107,6 +107,18 @@ interface Vlan30
 interface Vlan40
  description Gateway VLAN40_USERS
  ip address 10.10.40.254 255.255.255.0
+!
+interface Vlan70
+ description Gateway VLAN70_SERVERS
+ ip address 10.10.70.254 255.255.255.0
+!
+interface Vlan80
+ description Gateway SERVERS_WINDOWS
+ ip address 10.10.80.254 255.255.255.0
+!
+interface Vlan90
+ description Gateway SERVERS_LINUX
+ ip address 10.10.90.254 255.255.255.0
 !
 interface Vlan99
  description MGMT
