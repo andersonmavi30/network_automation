@@ -1,0 +1,27 @@
+---
+# Lab 2 - Full Change Pipeline
+# Ejecuta el flujo completo:
+# render -> precheck -> deploy -> postcheck -> nornir -> genie validation
+
+- import_playbook: render_lab2.yml
+
+- import_playbook: precheck_lab2.yml
+
+- import_playbook: deploy_lab2.yml
+
+- import_playbook: postcheck_lab2.yml
+
+- name: Run Lab 2 Nornir collection and Genie validation
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Run Nornir collection
+      ansible.builtin.command:
+        cmd: /opt/automation/venv/bin/python shared/scripts/collect_lab2_nornir.py
+        chdir: /home/andersonmavi30/netauto-labs
+
+    - name: Run Genie validation
+      ansible.builtin.command:
+        cmd: /opt/automation/venv/bin/python shared/scripts/validate_lab2_genie.py
+        chdir: /home/andersonmavi30/netauto-labs

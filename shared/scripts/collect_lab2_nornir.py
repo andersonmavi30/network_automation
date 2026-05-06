@@ -50,6 +50,10 @@ def main():
     for host, multi_result in result.items():
         if multi_result.failed:
             print(f"[FAILED] {host}")
+            for item in multi_result:
+                if item.failed:
+                    print(f"  Command: {item.name}")
+                    print(f"  Error: {item.exception}")
         else:
             print(f"[OK] {host}")
 
