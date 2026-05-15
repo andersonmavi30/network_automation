@@ -1,0 +1,6 @@
+interface {{ trunk_to_router }}
+ description TRUNK_TO_R1
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan {{ vlans | map(attribute='id') | join(',') }}
+ no shutdown
