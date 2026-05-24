@@ -12,7 +12,7 @@ devices:
     role: router
     mgmt_ip: 172.30.30.41
     platform: cisco_ios
-    mgmt_interface: GigabitEthernet0/3
+    mgmt_interface: GigabitEthernet2/1
 
   SW_DMZ:
     role: management_switch
@@ -35,66 +35,67 @@ devices:
     platform: cisco_ios
 
 vlans:
-  - id: 10
-    name: USERS
-    network: 10.10.10.0/24
-    gateway: 10.10.10.254
+- id: 10
+  name: USERS
+  network: 10.10.10.0/24
+  gateway: 10.10.10.254
 
-  - id: 20
-    name: WIFI_USERS
-    network: 10.10.20.0/24
-    gateway: 10.10.20.254
+- id: 20
+  name: WIFI_USERS
+  network: 10.10.20.0/24
+  gateway: 10.10.20.254
 
-  - id: 30
-    name: GUEST
-    network: 10.10.30.0/24
-    gateway: 10.10.30.254
+- id: 30
+  name: GUEST
+  network: 10.10.30.0/24
+  gateway: 10.10.30.254
 
 router_on_a_stick:
   router: R1
-  physical_interfaces:
-    - interface: GigabitEthernet0/0
-      connected_to: ASW3
-      vlans_allowed: [10, 20, 30]
-
-    - interface: GigabitEthernet0/1
-      connected_to: ASW1
-      vlans_allowed: [10, 20, 30]
-
-    - interface: GigabitEthernet0/2
-      connected_to: ASW2
-      vlans_allowed: [10, 20, 30]
+  physical_interface: GigabitEthernet0/0
+  connected_to: ASW1
+  vlans_allowed: [ 10, 20, 30 ]
 
 access_switches:
   ASW1:
+    role: core_access_switch
     trunk_to_router: GigabitEthernet2/1
     trunk_to_mgmt: GigabitEthernet2/0
+    downstream_trunks:
+    - interface: GigabitEthernet1/0
+      connected_to: ASW2
+    - interface: GigabitEthernet1/1
+      connected_to: ASW3
     access_ports:
-      - interface: GigabitEthernet0/0
-        vlan: 10
-      - interface: GigabitEthernet0/1
-        vlan: 20
-      - interface: GigabitEthernet0/2
-        vlan: 30
+    - interface: GigabitEthernet0/0
+      vlan: 10
+    - interface: GigabitEthernet0/1
+      vlan: 20
+    - interface: GigabitEthernet0/2
+      vlan: 30
 
   ASW2:
-    trunk_to_router: GigabitEthernet2/1
+    role: downstream_access_switch
+    trunk_to_upstream: GigabitEthernet1/0
     trunk_to_mgmt: GigabitEthernet2/0
+    upstream_switch: ASW1
     access_ports:
-      - interface: GigabitEthernet0/0
-        vlan: 10
-      - interface: GigabitEthernet0/1
-        vlan: 20
-      - interface: GigabitEthernet0/2
-        vlan: 30
+    - interface: GigabitEthernet0/0
+      vlan: 10
+    - interface: GigabitEthernet0/1
+      vlan: 20
+    - interface: GigabitEthernet0/2
+      vlan: 30
 
   ASW3:
-    trunk_to_router: GigabitEthernet2/1
+    role: downstream_access_switch
+    trunk_to_upstream: GigabitEthernet1/1
     trunk_to_mgmt: GigabitEthernet2/0
+    upstream_switch: ASW1
     access_ports:
-      - interface: GigabitEthernet0/0
-        vlan: 10
-      - interface: GigabitEthernet0/1
-        vlan: 20
-      - interface: GigabitEthernet0/2
-        vlan: 30
+    - interface: GigabitEthernet0/0
+      vlan: 10
+    - interface: GigabitEthernet0/1
+      vlan: 20
+    - interface: GigabitEthernet0/2
+      vlan: 30

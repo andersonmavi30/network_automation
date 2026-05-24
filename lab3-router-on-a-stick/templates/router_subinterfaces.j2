@@ -1,11 +1,12 @@
-{% for link in router_on_a_stick.physical_interfaces %}
-interface {{ link.interface }}
+interface {{ router_on_a_stick.physical_interface }}
+ description TRUNK_TO_{{ router_on_a_stick.connected_to }}
  no shutdown
+
 {% for vlan in vlans %}
-interface {{ link.interface }}.{{ vlan.id }}
- description GW_{{ vlan.name }}_TO_{{ link.connected_to }}
+interface {{ router_on_a_stick.physical_interface }}.{{ vlan.id }}
+ description GW_{{ vlan.name }}
  encapsulation dot1Q {{ vlan.id }}
  ip address {{ vlan.gateway }} 255.255.255.0
  no shutdown
-{% endfor %}
+
 {% endfor %}

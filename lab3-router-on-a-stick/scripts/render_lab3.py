@@ -23,6 +23,7 @@ def render_template(env, template_name, data):
 
 def save_config(device_name, config):
     RENDERED_DIR.mkdir(parents=True, exist_ok=True)
+
     output_file = RENDERED_DIR / f"{device_name}.cfg"
 
     with open(output_file, "w") as file:
@@ -31,17 +32,38 @@ def save_config(device_name, config):
     print(f"[OK] Rendered config created: {output_file}")
 
 
-def main():
-    intent = load_intent()
+def build_trunk_interfaces(switch_name, switch_data):
+    trunk_interfaces = []
 
-    env = Environment(
-        loader=FileSystemLoader(TEMPLATE_DIR),
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
+    if "trunk_to_router" in switch_data:
+        trunk_interfaces.append(
+            {
+                "interface": switch_data["trunk_to_router"],
+                "connected_to": "R1",
+            }
+        )
 
-    # Render R1 config
-    r1_config = render_template(
+    if "trunk_to_upstream" in switch_data:
+        trunk_interfaces.append(
+            {
+                "interface": switch_data["trunk_to_upstream"],
+                "connected_to": switch_data["upstream_switch"],
+            }
+        )
+
+    for trunk in switch_data.get("downstream_trunks", []):
+        trunk_interfaces.append(
+            {
+                "interface": trunk["interface"],
+                "connected_to": trunk["connected_to"],
+            }
+        )
+
+    return trunk_interfaces
+
+
+def render_router_config(env, intent):
+    router_config = render_template(
         env,
         "router_subinterfaces.j2",
         {
@@ -49,10 +71,14 @@ def main():
             "vlans": intent["vlans"],
         },
     )
-    save_config("R1", r1_config)
 
-    # Render access switch configs
+    save_config("R1", router_config)
+
+
+def render_switch_configs(env, intent):
     for switch_name, switch_data in intent["access_switches"].items():
+        trunk_interfaces = build_trunk_interfaces(switch_name, switch_data)
+
         vlans_config = render_template(
             env,
             "switch_vlans.j2",
@@ -65,7 +91,7 @@ def main():
             env,
             "switch_trunks.j2",
             {
-                "trunk_to_router": switch_data["trunk_to_router"],
+                "trunk_interfaces": trunk_interfaces,
                 "vlans": intent["vlans"],
             },
         )
@@ -87,6 +113,19 @@ def main():
         )
 
         save_config(switch_name, full_config)
+
+
+def main():
+    intent = load_intent()
+
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATE_DIR),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+
+    render_router_config(env, intent)
+    render_switch_configs(env, intent)
 
     print("[OK] Lab 3 render completed successfully.")
 
