@@ -117,11 +117,7 @@ def validate_switch(device_name, device_data, switch_data, vlans):
     print(f"[INFO] Validating {device_name}")
 
     with connect_device(device_data) as net_connect:
-        vlan_brief = net_connect.send_command(
-            "show vlan brief",
-            use_genie=True,
-        )
-
+        vlan_output = net_connect.send_command("show vlan brief")
         trunk_output = net_connect.send_command("show interfaces trunk")
         running_config = net_connect.send_command("show running-config")
 
@@ -131,8 +127,16 @@ def validate_switch(device_name, device_data, switch_data, vlans):
     results["vlans"] = {}
 
     for vlan_id in expected_vlan_ids:
-        vlan_data = vlan_brief.get("vlans", {}).get(vlan_id, {})
-        vlan_name = vlan_data.get("name")
+        vlan_line = next(
+            (
+                line for line in vlan_output.splitlines()
+                if line.strip().startswith(vlan_id + " ")
+            ),
+            ""
+        )
+
+        vlan_data = bool(vlan_line)
+        vlan_name = vlan_line.split()[1] if vlan_line else None
 
         results["vlans"][vlan_id] = {
             "exists": check_result(
@@ -165,7 +169,8 @@ def validate_switch(device_name, device_data, switch_data, vlans):
                 f"{trunk_interface} does not allow expected VLANs {','.join(expected_vlan_ids)}",
             ),
             "operational_output": check_result(
-                trunk_interface in trunk_output,
+                trunk_interface in trunk_output
+                or trunk_interface.replace("GigabitEthernet", "Gi") in trunk_output,
                 f"{trunk_interface} appears in show interfaces trunk",
                 f"{trunk_interface} does not appear in show interfaces trunk",
             ),

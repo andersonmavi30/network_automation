@@ -1,5 +1,6 @@
 interface {{ router_on_a_stick.physical_interface }}
  description TRUNK_TO_{{ router_on_a_stick.connected_to }}
+ no switchport
  no shutdown
 
 {% for vlan in vlans %}

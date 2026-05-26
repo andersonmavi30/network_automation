@@ -3,13 +3,13 @@
 from pathlib import Path
 import yaml
 from nornir import InitNornir
-from nornir.core.inventory import Inventory, Hosts, Host, Groups, Defaults
 from nornir_netmiko.tasks import netmiko_send_command
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 INTENT_FILE = BASE_DIR / "intent" / "lab3_intent.yml"
 NORNIR_DIR = BASE_DIR / "artifacts" / "nornir"
+NORNIR_INV_DIR = BASE_DIR / "artifacts" / "nornir_inventory"
 
 USERNAME = "netdevops"
 PASSWORD = "cisco"
@@ -27,25 +27,42 @@ def load_intent():
         return yaml.safe_load(file)
 
 
-def build_inventory(intent):
-    hosts = Hosts()
-    groups = Groups()
-    defaults = Defaults(username=USERNAME, password=PASSWORD)
+def build_simple_inventory(intent):
+    NORNIR_INV_DIR.mkdir(parents=True, exist_ok=True)
+
+    hosts_file = NORNIR_INV_DIR / "hosts.yml"
+    groups_file = NORNIR_INV_DIR / "groups.yml"
+    defaults_file = NORNIR_INV_DIR / "defaults.yml"
 
     target_devices = ["R1", "ASW1", "ASW2", "ASW3"]
+
+    hosts = {}
 
     for device_name in target_devices:
         device_data = intent["devices"][device_name]
 
-        hosts[device_name] = Host(
-            name=device_name,
-            hostname=device_data["mgmt_ip"],
-            platform=device_data["platform"],
-            username=USERNAME,
-            password=PASSWORD,
-        )
+        hosts[device_name] = {
+            "hostname": device_data["mgmt_ip"],
+            "platform": device_data["platform"],
+            "username": USERNAME,
+            "password": PASSWORD,
+        }
 
-    return Inventory(hosts=hosts, groups=groups, defaults=defaults)
+    defaults = {
+        "username": USERNAME,
+        "password": PASSWORD,
+    }
+
+    with open(hosts_file, "w") as file:
+        yaml.safe_dump(hosts, file, sort_keys=False)
+
+    with open(groups_file, "w") as file:
+        yaml.safe_dump({}, file, sort_keys=False)
+
+    with open(defaults_file, "w") as file:
+        yaml.safe_dump(defaults, file, sort_keys=False)
+
+    return hosts_file, groups_file, defaults_file
 
 
 def collect_commands(task):
@@ -74,15 +91,15 @@ def main():
 
     NORNIR_DIR.mkdir(parents=True, exist_ok=True)
 
-    inventory = build_inventory(intent)
+    hosts_file, groups_file, defaults_file = build_simple_inventory(intent)
 
     nr = InitNornir(
         inventory={
-            "plugin": "DictInventory",
+            "plugin": "SimpleInventory",
             "options": {
-                "hosts": inventory.hosts,
-                "groups": inventory.groups,
-                "defaults": inventory.defaults,
+                "host_file": str(hosts_file),
+                "group_file": str(groups_file),
+                "defaults_file": str(defaults_file),
             },
         }
     )

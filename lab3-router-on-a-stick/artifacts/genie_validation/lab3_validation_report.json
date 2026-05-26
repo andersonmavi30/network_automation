@@ -1,0 +1,336 @@
+{
+  "lab": "lab3-router-on-a-stick",
+  "router": {
+    "GigabitEthernet0/0.10": {
+      "ip_address": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.10 has expected IP 10.10.10.254"
+      },
+      "line_status": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.10 status is up"
+      },
+      "protocol_status": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.10 protocol is up"
+      },
+      "dot1q": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.10 has dot1Q 10"
+      }
+    },
+    "GigabitEthernet0/0.20": {
+      "ip_address": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.20 has expected IP 10.10.20.254"
+      },
+      "line_status": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.20 status is up"
+      },
+      "protocol_status": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.20 protocol is up"
+      },
+      "dot1q": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.20 has dot1Q 20"
+      }
+    },
+    "GigabitEthernet0/0.30": {
+      "ip_address": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.30 has expected IP 10.10.30.254"
+      },
+      "line_status": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.30 status is up"
+      },
+      "protocol_status": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.30 protocol is up"
+      },
+      "dot1q": {
+        "status": "PASS",
+        "message": "GigabitEthernet0/0.30 has dot1Q 30"
+      }
+    }
+  },
+  "switches": {
+    "ASW1": {
+      "vlans": {
+        "10": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 10 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 10 name is USERS"
+          }
+        },
+        "20": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 20 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 20 name is WIFI_USERS"
+          }
+        },
+        "30": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 30 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 30 name is GUEST"
+          }
+        }
+      },
+      "trunks": {
+        "GigabitEthernet2/1": {
+          "mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet2/1 is configured as trunk"
+          },
+          "allowed_vlans": {
+            "status": "PASS",
+            "message": "GigabitEthernet2/1 allows VLANs 10,20,30"
+          },
+          "operational_output": {
+            "status": "PASS",
+            "message": "GigabitEthernet2/1 appears in show interfaces trunk"
+          }
+        },
+        "GigabitEthernet1/0": {
+          "mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/0 is configured as trunk"
+          },
+          "allowed_vlans": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/0 allows VLANs 10,20,30"
+          },
+          "operational_output": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/0 appears in show interfaces trunk"
+          }
+        },
+        "GigabitEthernet1/1": {
+          "mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/1 is configured as trunk"
+          },
+          "allowed_vlans": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/1 allows VLANs 10,20,30"
+          },
+          "operational_output": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/1 appears in show interfaces trunk"
+          }
+        }
+      },
+      "access_ports": {
+        "GigabitEthernet0/0": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/0 is assigned to VLAN 10"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/0 has access mode configured"
+          }
+        },
+        "GigabitEthernet0/1": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/1 is assigned to VLAN 20"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/1 has access mode configured"
+          }
+        },
+        "GigabitEthernet0/2": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/2 is assigned to VLAN 30"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/2 has access mode configured"
+          }
+        }
+      }
+    },
+    "ASW2": {
+      "vlans": {
+        "10": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 10 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 10 name is USERS"
+          }
+        },
+        "20": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 20 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 20 name is WIFI_USERS"
+          }
+        },
+        "30": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 30 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 30 name is GUEST"
+          }
+        }
+      },
+      "trunks": {
+        "GigabitEthernet1/0": {
+          "mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/0 is configured as trunk"
+          },
+          "allowed_vlans": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/0 allows VLANs 10,20,30"
+          },
+          "operational_output": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/0 appears in show interfaces trunk"
+          }
+        }
+      },
+      "access_ports": {
+        "GigabitEthernet0/0": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/0 is assigned to VLAN 10"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/0 has access mode configured"
+          }
+        },
+        "GigabitEthernet0/1": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/1 is assigned to VLAN 20"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/1 has access mode configured"
+          }
+        },
+        "GigabitEthernet0/2": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/2 is assigned to VLAN 30"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/2 has access mode configured"
+          }
+        }
+      }
+    },
+    "ASW3": {
+      "vlans": {
+        "10": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 10 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 10 name is USERS"
+          }
+        },
+        "20": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 20 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 20 name is WIFI_USERS"
+          }
+        },
+        "30": {
+          "exists": {
+            "status": "PASS",
+            "message": "VLAN 30 exists"
+          },
+          "name": {
+            "status": "PASS",
+            "message": "VLAN 30 name is GUEST"
+          }
+        }
+      },
+      "trunks": {
+        "GigabitEthernet1/1": {
+          "mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/1 is configured as trunk"
+          },
+          "allowed_vlans": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/1 allows VLANs 10,20,30"
+          },
+          "operational_output": {
+            "status": "PASS",
+            "message": "GigabitEthernet1/1 appears in show interfaces trunk"
+          }
+        }
+      },
+      "access_ports": {
+        "GigabitEthernet0/0": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/0 is assigned to VLAN 10"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/0 has access mode configured"
+          }
+        },
+        "GigabitEthernet0/1": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/1 is assigned to VLAN 20"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/1 has access mode configured"
+          }
+        },
+        "GigabitEthernet0/2": {
+          "access_vlan": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/2 is assigned to VLAN 30"
+          },
+          "access_mode": {
+            "status": "PASS",
+            "message": "GigabitEthernet0/2 has access mode configured"
+          }
+        }
+      }
+    }
+  },
+  "overall_result": "PASS"
+}
