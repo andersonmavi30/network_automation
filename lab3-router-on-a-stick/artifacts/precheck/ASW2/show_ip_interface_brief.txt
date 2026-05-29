@@ -9,4 +9,4 @@ GigabitEthernet1/2     unassigned      YES unset  down                  down
 GigabitEthernet1/3     unassigned      YES unset  down                  down    
 GigabitEthernet2/0     unassigned      YES unset  up                    up      
 GigabitEthernet2/1     unassigned      YES unset  down                  down    
-Vlan99                 172.30.30.43    YES NVRAM  up                    up      
+Vlan99                 172.30.30.43    YES manual up                    up      

@@ -1,8 +1,8 @@
 Building configuration...
 
-Current configuration : 3637 bytes
+Current configuration : 3665 bytes
 !
-! Last configuration change at 01:02:26 UTC Tue May 26 2026 by netdevops
+! Last configuration change at 00:34:16 UTC Fri May 29 2026 by netdevops
 !
 version 15.2
 service timestamps debug datetime msec
@@ -100,7 +100,9 @@ interface GigabitEthernet2/1
  description to_SW_DMZ
  switchport access vlan 99
  switchport mode access
- negotiation auto
+ speed 1000
+ duplex full
+ no negotiation auto
 !
 interface Vlan99
  description MGMT
