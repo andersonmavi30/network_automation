@@ -9,4 +9,4 @@ Port        Vlans allowed and active in management domain
 Gi1/0       10,20,30
 
 Port        Vlans in spanning tree forwarding state and not pruned
-Gi1/0       10,20,30
+Gi1/0       none
