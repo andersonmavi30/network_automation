@@ -1,0 +1,4 @@
+---
+device_name: ASW1
+device_role: switch
+mgmt_ip: 172.30.30.41

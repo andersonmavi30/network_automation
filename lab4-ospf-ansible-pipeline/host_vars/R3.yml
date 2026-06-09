@@ -1,0 +1,4 @@
+---
+device_name: R3
+device_role: router
+mgmt_ip: 172.30.30.44
