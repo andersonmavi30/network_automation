@@ -1,0 +1,30 @@
+{% set device = sot.devices[inventory_hostname] %}
+!
+hostname {{ inventory_hostname }}
+!
+{% for loopback in device.loopbacks | default([]) %}
+interface {{ loopback.name }}
+ description OSPF_ROUTER_ID
+ ip address {{ loopback.ip }} {{ loopback.mask }}
+ no shutdown
+ ip ospf {{ sot.ospf.process_id }} area {{ loopback.ospf_area | default(sot.ospf.area) }}
+!
+{% endfor %}
+{% for intf in device.interfaces | default([]) %}
+interface {{ intf.name }}
+ description {{ intf.description }}
+ ip address {{ intf.ip }} {{ intf.mask }}
+ no shutdown
+ ip ospf {{ sot.ospf.process_id }} area {{ intf.ospf_area | default(sot.ospf.area) }}
+!
+{% endfor %}
+router ospf {{ sot.ospf.process_id }}
+ router-id {{ device.router_id }}
+ passive-interface default
+{% for intf in device.interfaces | default([]) %}
+{% if intf.description.startswith('TO_R') %}
+ no passive-interface {{ intf.name }}
+{% endif %}
+{% endfor %}
+!
+end
