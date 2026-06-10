@@ -1,0 +1,22 @@
+{% set lan = sot.lan %}
+!
+hostname {{ inventory_hostname }}
+!
+vlan {{ lan.vlan }}
+ name {{ lan.name }}
+!
+interface GigabitEthernet0/1
+ description TO_R1_LAN_GATEWAY
+ switchport mode access
+ switchport access vlan {{ lan.vlan }}
+ spanning-tree portfast
+ no shutdown
+!
+interface GigabitEthernet0/2
+ description TO_PC1
+ switchport mode access
+ switchport access vlan {{ lan.vlan }}
+ spanning-tree portfast
+ no shutdown
+!
+end
