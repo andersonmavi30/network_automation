@@ -1,0 +1,206 @@
+---
+lab:
+  name: lab4-ospf-ansible-pipeline
+  description: OSPF Single Area automated with Ansible pipeline
+  ospf_area: 0
+
+management:
+  network: 172.30.30.0/26
+  configured_manually: true
+  note: Management IPs, local user and SSH are configured manually. Ansible configures the lab services.
+
+devices:
+  SW_DMZ:
+    role: management_switch
+    mgmt_ip: 172.30.30.40
+
+  ASW1:
+    role: access_switch
+    mgmt_ip: 172.30.30.41
+
+  R1:
+    role: router
+    mgmt_ip: 172.30.30.42
+    router_id: 1.1.1.1
+    loopbacks:
+      - name: Loopback0
+        ip: 1.1.1.1
+        mask: 255.255.255.255
+        cidr: 1.1.1.1/32
+        ospf_area: 0
+    interfaces:
+      - name: GigabitEthernet0/1
+        description: TO_R2
+        ip: 10.0.12.1
+        mask: 255.255.255.252
+        cidr: 10.0.12.1/30
+        ospf_area: 0
+      - name: GigabitEthernet0/2
+        description: TO_R3
+        ip: 10.0.13.1
+        mask: 255.255.255.252
+        cidr: 10.0.13.1/30
+        ospf_area: 0
+      - name: GigabitEthernet0/3
+        description: TO_ASW1_LAN
+        ip: 10.10.30.254
+        mask: 255.255.255.0
+        cidr: 10.10.30.254/24
+        ospf_area: 0
+
+  R2:
+    role: router
+    mgmt_ip: 172.30.30.43
+    router_id: 2.2.2.2
+    loopbacks:
+      - name: Loopback0
+        ip: 2.2.2.2
+        mask: 255.255.255.255
+        cidr: 2.2.2.2/32
+        ospf_area: 0
+    interfaces:
+      - name: GigabitEthernet0/1
+        description: TO_R1
+        ip: 10.0.12.2
+        mask: 255.255.255.252
+        cidr: 10.0.12.2/30
+        ospf_area: 0
+      - name: GigabitEthernet0/2
+        description: TO_R3
+        ip: 10.0.23.1
+        mask: 255.255.255.252
+        cidr: 10.0.23.1/30
+        ospf_area: 0
+      - name: GigabitEthernet0/3
+        description: TO_R4
+        ip: 10.0.24.1
+        mask: 255.255.255.252
+        cidr: 10.0.24.1/30
+        ospf_area: 0
+
+  R3:
+    role: router
+    mgmt_ip: 172.30.30.44
+    router_id: 3.3.3.3
+    loopbacks:
+      - name: Loopback0
+        ip: 3.3.3.3
+        mask: 255.255.255.255
+        cidr: 3.3.3.3/32
+        ospf_area: 0
+    interfaces:
+      - name: GigabitEthernet0/1
+        description: TO_R1
+        ip: 10.0.13.2
+        mask: 255.255.255.252
+        cidr: 10.0.13.2/30
+        ospf_area: 0
+      - name: GigabitEthernet0/2
+        description: TO_R2
+        ip: 10.0.23.2
+        mask: 255.255.255.252
+        cidr: 10.0.23.2/30
+        ospf_area: 0
+      - name: GigabitEthernet0/3
+        description: TO_R4
+        ip: 10.0.34.1
+        mask: 255.255.255.252
+        cidr: 10.0.34.1/30
+        ospf_area: 0
+
+  R4:
+    role: router
+    mgmt_ip: 172.30.30.45
+    router_id: 4.4.4.4
+    loopbacks:
+      - name: Loopback0
+        ip: 4.4.4.4
+        mask: 255.255.255.255
+        cidr: 4.4.4.4/32
+        ospf_area: 0
+    interfaces:
+      - name: GigabitEthernet0/1
+        description: TO_R2
+        ip: 10.0.24.2
+        mask: 255.255.255.252
+        cidr: 10.0.24.2/30
+        ospf_area: 0
+      - name: GigabitEthernet0/2
+        description: TO_R3
+        ip: 10.0.34.2
+        mask: 255.255.255.252
+        cidr: 10.0.34.2/30
+        ospf_area: 0
+
+links:
+  - name: R1-R2
+    network: 10.0.12.0/30
+    endpoints:
+      - device: R1
+        interface: GigabitEthernet0/1
+        ip: 10.0.12.1/30
+      - device: R2
+        interface: GigabitEthernet0/1
+        ip: 10.0.12.2/30
+
+  - name: R1-R3
+    network: 10.0.13.0/30
+    endpoints:
+      - device: R1
+        interface: GigabitEthernet0/2
+        ip: 10.0.13.1/30
+      - device: R3
+        interface: GigabitEthernet0/1
+        ip: 10.0.13.2/30
+
+  - name: R2-R3
+    network: 10.0.23.0/30
+    endpoints:
+      - device: R2
+        interface: GigabitEthernet0/2
+        ip: 10.0.23.1/30
+      - device: R3
+        interface: GigabitEthernet0/2
+        ip: 10.0.23.2/30
+
+  - name: R2-R4
+    network: 10.0.24.0/30
+    endpoints:
+      - device: R2
+        interface: GigabitEthernet0/3
+        ip: 10.0.24.1/30
+      - device: R4
+        interface: GigabitEthernet0/1
+        ip: 10.0.24.2/30
+
+  - name: R3-R4
+    network: 10.0.34.0/30
+    endpoints:
+      - device: R3
+        interface: GigabitEthernet0/3
+        ip: 10.0.34.1/30
+      - device: R4
+        interface: GigabitEthernet0/2
+        ip: 10.0.34.2/30
+
+lan:
+  name: PC1_LAN
+  vlan: 30
+  network: 10.10.30.0/24
+  gateway:
+    device: R1
+    interface: GigabitEthernet0/3
+    ip: 10.10.30.254/24
+  pc:
+    name: PC1
+    ip: 10.10.30.1/24
+    gateway: 10.10.30.254
+
+ospf:
+  process_id: 1
+  area: 0
+  routers:
+    - R1
+    - R2
+    - R3
+    - R4
