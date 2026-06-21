@@ -1,0 +1,11 @@
+---
+ansible_connection: ansible.netcommon.network_cli
+ansible_network_os: cisco.ios.ios
+
+ansible_user: netdevops
+ansible_password: "{{ lookup('env', 'ANSIBLE_NET_PASSWORD') }}"
+
+ansible_network_cli_ssh_type: libssh
+ansible_libssh_hostkeys: ssh-rsa
+ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1"
+ansible_libssh_publickey_algorithms: "+ssh-rsa"
