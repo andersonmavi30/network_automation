@@ -1,0 +1,15 @@
+---
+- name: AWX test - show version on Cisco IOS
+  hosts: platforms_cisco_ios
+  gather_facts: false
+
+  tasks:
+    - name: Run show version
+      cisco.ios.ios_command:
+        commands:
+          - show version | include IOS
+      register: show_version_output
+
+    - name: Print output
+      ansible.builtin.debug:
+        var: show_version_output.stdout_lines
