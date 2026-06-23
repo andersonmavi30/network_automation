@@ -1,0 +1,49 @@
+# Precheck - ASW1
+
+VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active    Gi0/1, Gi0/2, Gi0/3, Gi1/0, Gi1/1, Gi1/2, Gi1/3, Gi2/1
+30   USERS                            active    Gi0/0
+99   MGMT                             active    Gi2/0
+1002 fddi-default                     act/unsup 
+1003 token-ring-default               act/unsup 
+1004 fddinet-default                  act/unsup 
+1005 trnet-default                    act/unsup
+
+---
+Port      Name               Status       Vlan       Duplex  Speed Type 
+Gi0/0     to_LAN             connected    30         a-full   auto RJ45
+Gi0/1                        notconnect   1          a-full   auto RJ45
+Gi0/2                        notconnect   1          a-full   auto RJ45
+Gi0/3                        notconnect   1          a-full   auto RJ45
+Gi1/0                        notconnect   1          a-full   auto RJ45
+Gi1/1                        notconnect   1          a-full   auto RJ45
+Gi1/2                        notconnect   1          a-full   auto RJ45
+Gi1/3                        notconnect   1          a-full   auto RJ45
+Gi2/0     to_SW_DMZ          connected    99         a-full   auto RJ45
+Gi2/1                        notconnect   1          a-full   auto RJ45
+
+---
+Switch is in pvst mode
+Root bridge for: VLAN0001, VLAN0030, VLAN0099
+Extended system ID                      is enabled
+Portfast Default                        is disabled
+Portfast Edge BPDU Guard Default        is disabled
+Portfast Edge BPDU Filter Default       is disabled
+Loopguard Default                       is disabled
+PVST Simulation Default                 is enabled but inactive in pvst mode
+Bridge Assurance                        is enabled but inactive in pvst mode
+EtherChannel misconfig guard            is enabled
+Configured Pathcost method used is short
+UplinkFast                              is disabled
+BackboneFast                            is disabled
+
+Name                   Blocking Listening Learning Forwarding STP Active
+---------------------- -------- --------- -------- ---------- ----------
+VLAN0001                     0         0        0          8          8
+VLAN0030                     0         0        0          1          1
+VLAN0099                     0         0        0          1          1
+---------------------- -------- --------- -------- ---------- ----------
+3 vlans                      0         0        0         10         10
+
+---

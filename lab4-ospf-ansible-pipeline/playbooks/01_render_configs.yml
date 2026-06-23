@@ -1,0 +1,32 @@
+---
+- name: Lab 4 - Render router OSPF configs
+  hosts: device_roles_router
+  gather_facts: false
+
+  tasks:
+    - name: Load Lab 4 source of truth
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../intent/lab4_source_of_truth.yml"
+        name: sot
+
+    - name: Render Cisco IOS router config
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/ios_router_ospf.j2"
+        dest: "{{ playbook_dir }}/../artifacts/rendered/{{ inventory_hostname }}.cfg"
+      delegate_to: localhost
+
+- name: Lab 4 - Render access switch LAN config
+  hosts: device_roles_access_switch
+  gather_facts: false
+
+  tasks:
+    - name: Load Lab 4 source of truth
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../intent/lab4_source_of_truth.yml"
+        name: sot
+
+    - name: Render Cisco IOS access switch config
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/ios_access_switch_lan.j2"
+        dest: "{{ playbook_dir }}/../artifacts/rendered/{{ inventory_hostname }}.cfg"
+      delegate_to: localhost

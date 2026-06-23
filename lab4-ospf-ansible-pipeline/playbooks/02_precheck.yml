@@ -1,0 +1,71 @@
+---
+- name: Lab 4 - Router precheck
+  hosts: device_roles_router
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Run router precheck commands
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+          - show ip ospf neighbor
+          - show ip route ospf
+          - show ip protocols
+      register: router_precheck
+
+    - name: Save router precheck evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/precheck/{{ inventory_hostname }}_precheck.txt"
+        content: |
+          # Precheck - {{ inventory_hostname }}
+
+          {% for output in router_precheck.stdout %}
+          {{ output }}
+
+          ---
+          {% endfor %}
+      delegate_to: localhost
+
+- name: Lab 4 - Access switch precheck
+  hosts: device_roles_access_switch
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Run access switch precheck commands
+      cisco.ios.ios_command:
+        commands:
+          - show vlan brief
+          - show interfaces status
+          - show spanning-tree summary
+      register: switch_precheck
+
+    - name: Save access switch precheck evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/precheck/{{ inventory_hostname }}_precheck.txt"
+        content: |
+          # Precheck - {{ inventory_hostname }}
+
+          {% for output in switch_precheck.stdout %}
+          {{ output }}
+
+          ---
+          {% endfor %}
+      delegate_to: localhost
