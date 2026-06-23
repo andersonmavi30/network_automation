@@ -1,0 +1,29 @@
+FROM quay.io/ansible/awx-ee:24.6.1
+
+USER root
+
+RUN python3 -m pip install --no-cache-dir \
+    ansible-core==2.15.13 \
+    ansible-pylibssh==1.4.0
+
+RUN update-crypto-policies --set LEGACY
+
+RUN rm -rf /usr/share/ansible/collections/ansible_collections/ansible/netcommon \
+           /usr/share/ansible/collections/ansible_collections/ansible/utils \
+           /usr/share/ansible/collections/ansible_collections/cisco/ios \
+           /usr/share/ansible/collections/ansible_collections/netbox/netbox
+
+RUN ansible-galaxy collection install \
+    ansible.netcommon:8.4.0 \
+    ansible.utils:6.0.1 \
+    cisco.ios:11.3.0 \
+    netbox.netbox:3.23.0 \
+    -p /usr/share/ansible/collections --force
+
+ENV ANSIBLE_NETWORK_CLI_SSH_TYPE=libssh
+ENV ANSIBLE_LIBSSH_HOSTKEYS=ssh-rsa
+ENV ANSIBLE_LIBSSH_KEY_EXCHANGE_ALGORITHMS=+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1
+ENV ANSIBLE_LIBSSH_PUBLICKEY_ALGORITHMS=+ssh-rsa
+ENV ANSIBLE_HOST_KEY_CHECKING=False
+
+USER 1000
