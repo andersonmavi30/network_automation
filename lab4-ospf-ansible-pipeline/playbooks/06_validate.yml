@@ -1,0 +1,130 @@
+---
+- name: Lab 4 - Validate router OSPF state
+  hosts: device_roles_router
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+    expected_ospf_neighbors:
+      R1: 2
+      R2: 3
+      R3: 3
+      R4: 2
+
+  tasks:
+    - name: Load Lab 4 source of truth
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../intent/lab4_source_of_truth.yml"
+        name: sot
+
+    - name: Collect router validation commands
+      cisco.ios.ios_command:
+        commands:
+          - show ip ospf neighbor
+          - show ip route ospf
+          - show running-config | section router ospf
+      register: router_validation
+
+    - name: Set router validation facts
+      ansible.builtin.set_fact:
+        ospf_neighbor_output: "{{ router_validation.stdout[0] }}"
+        ospf_route_output: "{{ router_validation.stdout[1] }}"
+        ospf_config_output: "{{ router_validation.stdout[2] }}"
+        ospf_full_neighbors: "{{ router_validation.stdout[0] | regex_findall('FULL') | length }}"
+
+    - name: Validate router OSPF state
+      ansible.builtin.assert:
+        that:
+          - "'router ospf ' ~ sot.ospf.process_id|string in ospf_config_output"
+          - "'router-id ' ~ sot.devices[inventory_hostname].router_id in ospf_config_output"
+          - ospf_full_neighbors | int >= expected_ospf_neighbors[inventory_hostname] | int
+          - ospf_route_output | length > 0
+        success_msg: "PASS - {{ inventory_hostname }} OSPF validation successful"
+        fail_msg: "FAIL - {{ inventory_hostname }} OSPF validation failed"
+
+    - name: Save router validation evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/validate/{{ inventory_hostname }}_validate.txt"
+        content: |
+          # Validate - {{ inventory_hostname }}
+
+          Expected OSPF neighbors: {{ expected_ospf_neighbors[inventory_hostname] }}
+          Detected FULL neighbors: {{ ospf_full_neighbors }}
+
+          OSPF Neighbor Output:
+          {{ ospf_neighbor_output }}
+
+          OSPF Route Output:
+          {{ ospf_route_output }}
+
+          OSPF Config Output:
+          {{ ospf_config_output }}
+      delegate_to: localhost
+
+- name: Lab 4 - Validate access switch LAN state
+  hosts: device_roles_access_switch
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Load Lab 4 source of truth
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../intent/lab4_source_of_truth.yml"
+        name: sot
+
+    - name: Collect access switch validation commands
+      cisco.ios.ios_command:
+        commands:
+          - show vlan brief
+          - show running-config interface GigabitEthernet0/1
+          - show running-config interface GigabitEthernet0/2
+      register: switch_validation
+
+    - name: Set switch validation facts
+      ansible.builtin.set_fact:
+        vlan_output: "{{ switch_validation.stdout[0] }}"
+        gi01_output: "{{ switch_validation.stdout[1] }}"
+        gi02_output: "{{ switch_validation.stdout[2] }}"
+
+    - name: Validate access switch LAN state
+      ansible.builtin.assert:
+        that:
+          - sot.lan.vlan|string in vlan_output
+          - sot.lan.name in vlan_output
+          - "'switchport access vlan ' ~ sot.lan.vlan|string in gi01_output"
+          - "'switchport access vlan ' ~ sot.lan.vlan|string in gi02_output"
+        success_msg: "PASS - {{ inventory_hostname }} LAN validation successful"
+        fail_msg: "FAIL - {{ inventory_hostname }} LAN validation failed"
+
+    - name: Save access switch validation evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/validate/{{ inventory_hostname }}_validate.txt"
+        content: |
+          # Validate - {{ inventory_hostname }}
+
+          Expected VLAN: {{ sot.lan.vlan }}
+          Expected VLAN Name: {{ sot.lan.name }}
+
+          VLAN Output:
+          {{ vlan_output }}
+
+          Gi0/1 Config:
+          {{ gi01_output }}
+
+          Gi0/2 Config:
+          {{ gi02_output }}
+      delegate_to: localhost
