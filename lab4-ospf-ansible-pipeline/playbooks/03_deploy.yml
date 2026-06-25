@@ -1,0 +1,64 @@
+---
+- name: Lab 4 - Deploy router OSPF configs
+  hosts: device_roles_router
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Deploy rendered router config
+      cisco.ios.ios_config:
+        src: "{{ playbook_dir }}/../artifacts/rendered/{{ inventory_hostname }}.cfg"
+        save_when: changed
+      register: router_deploy
+
+    - name: Save router deploy evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/deploy/{{ inventory_hostname }}_deploy.txt"
+        content: |
+          # Deploy - {{ inventory_hostname }}
+
+          Changed: {{ router_deploy.changed }}
+
+          Updates:
+          {{ router_deploy.updates | default([]) | to_nice_yaml }}
+      delegate_to: localhost
+
+- name: Lab 4 - Deploy access switch LAN config
+  hosts: device_roles_access_switch
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Deploy rendered access switch config
+      cisco.ios.ios_config:
+        src: "{{ playbook_dir }}/../artifacts/rendered/{{ inventory_hostname }}.cfg"
+        save_when: changed
+      register: switch_deploy
+
+    - name: Save access switch deploy evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/deploy/{{ inventory_hostname }}_deploy.txt"
+        content: |
+          # Deploy - {{ inventory_hostname }}
+
+          Changed: {{ switch_deploy.changed }}
+
+          Updates:
+          {{ switch_deploy.updates | default([]) | to_nice_yaml }}
+      delegate_to: localhost

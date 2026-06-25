@@ -1,0 +1,74 @@
+---
+- name: Lab 4 - Router postcheck
+  hosts: device_roles_router
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Run router postcheck commands
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+          - show ip ospf neighbor
+          - show ip route ospf
+          - show ip protocols
+          - show running-config | section router ospf
+      register: router_postcheck
+
+    - name: Save router postcheck evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/postcheck/{{ inventory_hostname }}_postcheck.txt"
+        content: |
+          # Postcheck - {{ inventory_hostname }}
+
+          {% for output in router_postcheck.stdout %}
+          {{ output }}
+
+          ---
+          {% endfor %}
+      delegate_to: localhost
+
+- name: Lab 4 - Access switch postcheck
+  hosts: device_roles_access_switch
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Run access switch postcheck commands
+      cisco.ios.ios_command:
+        commands:
+          - show vlan brief
+          - show interfaces status
+          - show spanning-tree summary
+          - show running-config interface GigabitEthernet0/1
+          - show running-config interface GigabitEthernet0/2
+      register: switch_postcheck
+
+    - name: Save access switch postcheck evidence
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../artifacts/postcheck/{{ inventory_hostname }}_postcheck.txt"
+        content: |
+          # Postcheck - {{ inventory_hostname }}
+
+          {% for output in switch_postcheck.stdout %}
+          {{ output }}
+
+          ---
+          {% endfor %}
+      delegate_to: localhost
