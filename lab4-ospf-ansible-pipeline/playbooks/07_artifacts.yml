@@ -1,0 +1,77 @@
+---
+- name: Lab 4 - Generate final artifacts report
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    lab_name: "Lab 4 - OSPF Single Area Ansible Pipeline"
+    artifacts_root: "{{ playbook_dir }}/../artifacts"
+    final_report: "{{ artifacts_root }}/final/lab4_final_report.md"
+    expected_devices:
+      - ASW1
+      - R1
+      - R2
+      - R3
+      - R4
+    expected_stages:
+      - precheck
+      - deploy
+      - postcheck
+      - collect
+      - validate
+
+  tasks:
+    - name: Ensure final artifacts directory exists
+      ansible.builtin.file:
+        path: "{{ artifacts_root }}/final"
+        state: directory
+        mode: "0755"
+
+    - name: Find all generated artifact files
+      ansible.builtin.find:
+        paths: "{{ artifacts_root }}"
+        patterns: "*.txt"
+        recurse: true
+      register: lab4_artifact_files
+
+    - name: Generate Lab 4 final markdown report
+      ansible.builtin.copy:
+        dest: "{{ final_report }}"
+        mode: "0644"
+        content: |
+          # {{ lab_name }}
+
+          Generated at: {{ lookup('pipe', 'date -Iseconds') }}
+
+          ## Objective
+
+          Automate, deploy, validate and document a Cisco IOS Lab 4 OSPF single-area topology using:
+
+          - GitLab as source control
+          - NetBox as dynamic inventory/source of truth
+          - Ansible AWX as the official execution platform
+          - Ansible playbooks for render, precheck, deploy, postcheck, collect, validate and reporting
+
+          ## Expected devices
+
+          {% for device in expected_devices %}
+          - {{ device }}
+          {% endfor %}
+
+          ## Expected pipeline stages
+
+          {% for stage in expected_stages %}
+          - {{ stage }}
+          {% endfor %}
+
+          ## Generated artifact files
+
+          {% for file in lab4_artifact_files.files | sort(attribute='path') %}
+          - {{ file.path | regex_replace('^' ~ artifacts_root ~ '/', '') }}
+          {% endfor %}
+
+          ## Final status
+
+          Lab 4 final report generated successfully.
+
+          The final execution evidence is stored under the artifacts directory.
