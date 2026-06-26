@@ -1,0 +1,8 @@
+---
+- import_playbook: 01_render_configs.yml
+- import_playbook: 02_precheck.yml
+- import_playbook: 03_deploy.yml
+- import_playbook: 04_postcheck.yml
+- import_playbook: 05_collect.yml
+- import_playbook: 06_validate.yml
+- import_playbook: 07_artifacts.yml
