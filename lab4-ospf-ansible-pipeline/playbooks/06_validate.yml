@@ -18,6 +18,14 @@
       R4: 2
 
   tasks:
+    - name: Ensure validate artifacts directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../artifacts/validate"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
     - name: Load Lab 4 source of truth
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../intent/lab4_source_of_truth.yml"
@@ -81,6 +89,14 @@
     ansible_libssh_publickey_algorithms: "+ssh-rsa"
 
   tasks:
+    - name: Ensure validate artifacts directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../artifacts/validate"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
     - name: Load Lab 4 source of truth
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../intent/lab4_source_of_truth.yml"

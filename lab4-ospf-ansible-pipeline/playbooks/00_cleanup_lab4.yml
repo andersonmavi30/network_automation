@@ -1,0 +1,62 @@
+---
+- name: Lab 4 - Cleanup router configuration
+  hosts: device_roles_router
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Remove Lab 4 OSPF and Loopback0
+      cisco.ios.ios_config:
+        lines:
+          - no router ospf 1
+          - no interface Loopback0
+        save_when: changed
+
+    - name: Reset common Lab 4 router interfaces
+      cisco.ios.ios_config:
+        lines:
+          - default interface GigabitEthernet0/1
+          - default interface GigabitEthernet0/2
+        save_when: changed
+
+    - name: Reset third Lab 4 router interface
+      cisco.ios.ios_config:
+        lines:
+          - default interface GigabitEthernet0/3
+        save_when: changed
+      when: inventory_hostname != "R4"
+
+- name: Lab 4 - Cleanup access switch configuration
+  hosts: device_roles_access_switch
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.ios.ios
+    ansible_user: netdevops
+    ansible_password: "{{ lookup('env', 'IOS_PASSWORD') }}"
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_hostkeys: ssh-rsa
+    ansible_libssh_key_exchange_algorithms: "+diffie-hellman-group-exchange-sha1,+diffie-hellman-group14-sha1,+diffie-hellman-group1-sha1"
+    ansible_libssh_publickey_algorithms: "+ssh-rsa"
+
+  tasks:
+    - name: Reset Lab 4 access switch interfaces
+      cisco.ios.ios_config:
+        lines:
+          - default interface GigabitEthernet0/1
+          - default interface GigabitEthernet0/2
+        save_when: changed
+
+    - name: Remove Lab 4 VLAN
+      cisco.ios.ios_config:
+        lines:
+          - no vlan 30
+        save_when: changed

@@ -13,6 +13,14 @@
     ansible_libssh_publickey_algorithms: "+ssh-rsa"
 
   tasks:
+    - name: Ensure collect artifacts directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../artifacts/collect"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
     - name: Collect router operational evidence
       cisco.ios.ios_command:
         commands:
@@ -53,6 +61,14 @@
     ansible_libssh_publickey_algorithms: "+ssh-rsa"
 
   tasks:
+    - name: Ensure collect artifacts directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../artifacts/collect"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
     - name: Collect access switch operational evidence
       cisco.ios.ios_command:
         commands:
