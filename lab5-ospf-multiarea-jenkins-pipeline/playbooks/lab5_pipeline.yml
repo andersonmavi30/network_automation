@@ -1,0 +1,9 @@
+---
+- import_playbook: 01_render.yml
+- import_playbook: 02_batfish.yml
+- import_playbook: 03_precheck.yml
+- import_playbook: 04_deploy.yml
+- import_playbook: 05_postcheck.yml
+- import_playbook: 06_nornir.yml
+- import_playbook: 07_pyats.yml
+- import_playbook: 08_validate.yml

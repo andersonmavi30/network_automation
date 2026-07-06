@@ -1,0 +1,6 @@
+---
+- name: Lab 5 - pyATS structured validation
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - role: ../roles/lab5_pyats

@@ -1,0 +1,141 @@
+---
+lab_id: lab5
+lab_name: ospf_multiarea_jenkins_pipeline
+
+ospf:
+  process_id: 10
+  router_id_source: loopback0
+
+devices:
+  R1:
+    role: backbone_router
+    mgmt_ip: 172.30.30.41
+    loopback0: 1.1.1.1/32
+    ospf_areas:
+      - 0
+
+  R2:
+    role: abr_area_0_10
+    mgmt_ip: 172.30.30.42
+    loopback0: 2.2.2.2/32
+    ospf_areas:
+      - 0
+      - 10
+
+  R3:
+    role: abr_area_0_20
+    mgmt_ip: 172.30.30.43
+    loopback0: 3.3.3.3/32
+    ospf_areas:
+      - 0
+      - 20
+
+  R4:
+    role: internal_area_10
+    mgmt_ip: 172.30.30.44
+    loopback0: 4.4.4.4/32
+    ospf_areas:
+      - 10
+
+  R5:
+    role: internal_area_20
+    mgmt_ip: 172.30.30.45
+    loopback0: 5.5.5.5/32
+    ospf_areas:
+      - 20
+
+links:
+  - name: R1_R2
+    area: 0
+    network: 10.0.12.0/30
+    endpoints:
+      - device: R1
+        interface: GigabitEthernet2
+        ip: 10.0.12.1/30
+      - device: R2
+        interface: GigabitEthernet2
+        ip: 10.0.12.2/30
+
+  - name: R1_R3
+    area: 0
+    network: 10.0.13.0/30
+    endpoints:
+      - device: R1
+        interface: GigabitEthernet3
+        ip: 10.0.13.1/30
+      - device: R3
+        interface: GigabitEthernet2
+        ip: 10.0.13.2/30
+
+  - name: R2_R3
+    area: 0
+    network: 10.0.23.0/30
+    endpoints:
+      - device: R2
+        interface: GigabitEthernet3
+        ip: 10.0.23.1/30
+      - device: R3
+        interface: GigabitEthernet3
+        ip: 10.0.23.2/30
+
+  - name: R2_R4
+    area: 10
+    network: 10.0.24.0/30
+    endpoints:
+      - device: R2
+        interface: GigabitEthernet4
+        ip: 10.0.24.1/30
+      - device: R4
+        interface: GigabitEthernet2
+        ip: 10.0.24.2/30
+
+  - name: R3_R5
+    area: 20
+    network: 10.0.35.0/30
+    endpoints:
+      - device: R3
+        interface: GigabitEthernet4
+        ip: 10.0.35.1/30
+      - device: R5
+        interface: GigabitEthernet2
+        ip: 10.0.35.2/30
+
+lans:
+  - name: AREA_10_LAN
+    area: 10
+    network: 10.10.40.0/24
+    gateway_device: R4
+    gateway_interface: GigabitEthernet3
+    gateway_ip: 10.10.40.254/24
+    pc_name: PC1
+    pc_ip: 10.10.40.1/24
+    pc_gateway: 10.10.40.254
+
+  - name: AREA_20_LAN
+    area: 20
+    network: 10.10.50.0/24
+    gateway_device: R5
+    gateway_interface: GigabitEthernet3
+    gateway_ip: 10.10.50.254/24
+    pc_name: PC2
+    pc_ip: 10.10.50.1/24
+    pc_gateway: 10.10.50.254
+
+validation:
+  expected_abr:
+    - R2
+    - R3
+
+  expected_inter_area_routes:
+    R4:
+      - 10.10.50.0/24
+      - 5.5.5.5/32
+    R5:
+      - 10.10.40.0/24
+      - 4.4.4.4/32
+
+  expected_reachability:
+    - source: PC1
+      destination: 10.10.50.1
+    - source: PC2
+      destination: 10.10.40.1

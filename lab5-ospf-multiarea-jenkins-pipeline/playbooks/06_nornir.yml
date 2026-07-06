@@ -1,0 +1,6 @@
+---
+- name: Lab 5 - Nornir collect and backup
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - role: ../roles/lab5_nornir

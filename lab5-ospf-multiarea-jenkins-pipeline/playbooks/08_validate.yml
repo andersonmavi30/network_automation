@@ -1,0 +1,6 @@
+---
+- name: Lab 5 - Final validation summary
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - role: ../roles/lab5_validate

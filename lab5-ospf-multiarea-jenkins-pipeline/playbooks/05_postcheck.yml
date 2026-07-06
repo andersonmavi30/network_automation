@@ -1,0 +1,6 @@
+---
+- name: Lab 5 - OSPF postcheck with Ansible
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  roles:
+    - role: ../roles/lab5_postcheck
