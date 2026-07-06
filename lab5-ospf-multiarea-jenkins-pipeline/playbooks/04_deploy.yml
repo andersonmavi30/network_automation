@@ -1,0 +1,6 @@
+---
+- name: Lab 5 - Deploy OSPF multi-area
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  roles:
+    - role: ../roles/lab5_ospf

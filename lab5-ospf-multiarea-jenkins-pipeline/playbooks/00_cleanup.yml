@@ -1,0 +1,6 @@
+---
+- name: Lab 5 - Cleanup / Rollback
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  roles:
+    - role: ../roles/lab5_cleanup

@@ -1,0 +1,6 @@
+---
+- name: Lab 5 - Render candidate configs with Jinja2
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - role: ../roles/lab5_render
