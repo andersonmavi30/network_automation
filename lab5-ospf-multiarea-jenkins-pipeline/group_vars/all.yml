@@ -1,0 +1,12 @@
+---
+ansible_connection: ansible.netcommon.network_cli
+ansible_network_os: cisco.ios.ios
+ansible_become: true
+ansible_become_method: enable
+
+ansible_user: "{{ vault_ios_username }}"
+ansible_password: "{{ vault_ios_password }}"
+ansible_become_password: "{{ vault_ios_enable_password }}"
+
+ospf_process_id: 10
+lab_name: lab5-ospf-multiarea-jenkins-pipeline
