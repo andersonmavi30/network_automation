@@ -1,0 +1,43 @@
+hostname {{ device_name }}
+!
+interface Loopback0
+ description OSPF Router-ID
+ ip address {{ device_data.loopback0 | ansible.utils.ipaddr('address') }} {{ device_data.loopback0 | ansible.utils.ipaddr('netmask') }}
+ no shutdown
+!
+{% for link in lab5_topology.links %}
+{% for endpoint in link.endpoints %}
+{% if endpoint.device == device_name %}
+interface {{ endpoint.interface }}
+ description {{ link.name }} - OSPF area {{ link.area }}
+ ip address {{ endpoint.ip | ansible.utils.ipaddr('address') }} {{ endpoint.ip | ansible.utils.ipaddr('netmask') }}
+ no shutdown
+!
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% for lan in lab5_topology.lans %}
+{% if lan.gateway_device == device_name %}
+interface {{ lan.gateway_interface }}
+ description {{ lan.name }} - OSPF area {{ lan.area }}
+ ip address {{ lan.gateway_ip | ansible.utils.ipaddr('address') }} {{ lan.gateway_ip | ansible.utils.ipaddr('netmask') }}
+ no shutdown
+!
+{% endif %}
+{% endfor %}
+router ospf {{ lab5_topology.ospf.process_id }}
+ router-id {{ device_data.loopback0 | ansible.utils.ipaddr('address') }}
+ passive-interface Loopback0
+ network {{ device_data.loopback0 | ansible.utils.ipaddr('network') }} {{ device_data.loopback0 | ansible.utils.ipaddr('hostmask') }} area {{ device_data.ospf_areas[0] }}
+{% for link in lab5_topology.links %}
+{% for endpoint in link.endpoints %}
+{% if endpoint.device == device_name %}
+ network {{ endpoint.ip | ansible.utils.ipaddr('network') }} {{ endpoint.ip | ansible.utils.ipaddr('hostmask') }} area {{ link.area }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% for lan in lab5_topology.lans %}
+{% if lan.gateway_device == device_name %}
+ network {{ lan.gateway_ip | ansible.utils.ipaddr('network') }} {{ lan.gateway_ip | ansible.utils.ipaddr('hostmask') }} area {{ lan.area }}
+{% endif %}
+{% endfor %}
