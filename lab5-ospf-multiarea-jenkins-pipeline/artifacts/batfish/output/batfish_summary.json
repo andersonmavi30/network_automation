@@ -1,0 +1,56 @@
+{
+  "batfish_host": "127.0.0.1",
+  "network": "lab5",
+  "snapshot": "lab5_ospf_multiarea",
+  "config_count": 5,
+  "configs": [
+    "R1.cfg",
+    "R2.cfg",
+    "R3.cfg",
+    "R4.cfg",
+    "R5.cfg"
+  ],
+  "parse_status": [
+    {
+      "File_Name": "configs/R1.cfg",
+      "Status": "PASSED",
+      "File_Format": "CISCO_IOS",
+      "Nodes": [
+        "r1"
+      ]
+    },
+    {
+      "File_Name": "configs/R2.cfg",
+      "Status": "PASSED",
+      "File_Format": "CISCO_IOS",
+      "Nodes": [
+        "r2"
+      ]
+    },
+    {
+      "File_Name": "configs/R3.cfg",
+      "Status": "PASSED",
+      "File_Format": "CISCO_IOS",
+      "Nodes": [
+        "r3"
+      ]
+    },
+    {
+      "File_Name": "configs/R4.cfg",
+      "Status": "PASSED",
+      "File_Format": "CISCO_IOS",
+      "Nodes": [
+        "r4"
+      ]
+    },
+    {
+      "File_Name": "configs/R5.cfg",
+      "Status": "PASSED",
+      "File_Format": "CISCO_IOS",
+      "Nodes": [
+        "r5"
+      ]
+    }
+  ],
+  "init_issues_count": 0
+}
