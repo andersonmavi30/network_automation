@@ -1,0 +1,37 @@
+---
+- name: Define Lab 5 deploy paths
+  ansible.builtin.set_fact:
+    lab5_rendered_config: "{{ playbook_dir }}/../artifacts/rendered/{{ inventory_hostname }}.cfg"
+    lab5_deploy_artifact_dir: "{{ playbook_dir }}/../artifacts/deploy"
+
+- name: Ensure deploy artifact directory exists
+  ansible.builtin.file:
+    path: "{{ lab5_deploy_artifact_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+
+- name: Check rendered config exists for device
+  ansible.builtin.stat:
+    path: "{{ lab5_rendered_config }}"
+  register: lab5_rendered_config_stat
+  delegate_to: localhost
+
+- name: Fail if rendered config is missing
+  ansible.builtin.fail:
+    msg: "Missing rendered config for {{ inventory_hostname }}: {{ lab5_rendered_config }}"
+  when: not lab5_rendered_config_stat.stat.exists
+
+- name: Deploy Lab 5 OSPF multi-area rendered config
+  cisco.ios.ios_config:
+    src: "{{ lab5_rendered_config }}"
+    save_when: modified
+  register: lab5_ospf_deploy_result
+
+- name: Save deploy result artifact
+  ansible.builtin.copy:
+    content: "{{ lab5_ospf_deploy_result | to_nice_json }}"
+    dest: "{{ lab5_deploy_artifact_dir }}/{{ inventory_hostname }}.json"
+    mode: "0644"
+  delegate_to: localhost

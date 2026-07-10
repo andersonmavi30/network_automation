@@ -1,0 +1,30 @@
+---
+- name: Ensure Batfish artifact directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ playbook_dir }}/../artifacts/batfish"
+    - "{{ playbook_dir }}/../artifacts/batfish/snapshot"
+    - "{{ playbook_dir }}/../artifacts/batfish/snapshot/configs"
+    - "{{ playbook_dir }}/../artifacts/batfish/output"
+
+- name: Copy rendered configs into Batfish snapshot
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ playbook_dir }}/../artifacts/batfish/snapshot/configs/{{ item | basename }}"
+    mode: "0644"
+  loop: "{{ lookup('ansible.builtin.fileglob', playbook_dir + '/../artifacts/rendered/*.cfg', wantlist=True) }}"
+
+- name: Run Batfish validation
+  ansible.builtin.command:
+    cmd: >
+      python3 {{ role_path }}/files/lab5_batfish_validate.py
+      --snapshot-dir {{ playbook_dir }}/../artifacts/batfish/snapshot
+      --output-dir {{ playbook_dir }}/../artifacts/batfish/output
+  environment:
+    BATFISH_HOST: "{{ batfish_host | default('127.0.0.1') }}"
+    BATFISH_NETWORK: "{{ batfish_network | default('lab5') }}"
+    BATFISH_SNAPSHOT: "{{ batfish_snapshot | default('lab5_ospf_multiarea') }}"
+  changed_when: true
