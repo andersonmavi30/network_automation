@@ -1,0 +1,50 @@
+---
+- name: Load Lab 5 topology intent
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/lab5_topology.yml"
+    name: lab5_topology
+
+- name: Verify device exists in Lab 5 topology
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in lab5_topology.devices
+    fail_msg: "{{ inventory_hostname }} is not defined in vars/lab5_topology.yml"
+    success_msg: "{{ inventory_hostname }} exists in the Lab 5 topology"
+
+- name: Define precheck commands
+  ansible.builtin.set_fact:
+    lab5_precheck_commands:
+      - show clock
+      - show ip interface brief
+      - show running-config | section router ospf
+      - show ip ospf neighbor
+      - show ip route ospf
+
+- name: Ensure precheck artifact directory exists
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/precheck"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+
+- name: Collect device state before deployment
+  cisco.ios.ios_command:
+    commands: "{{ lab5_precheck_commands }}"
+  register: lab5_precheck_result
+  changed_when: false
+
+- name: Save precheck evidence
+  ansible.builtin.copy:
+    content: |
+      {{
+        {
+          'device': inventory_hostname,
+          'management_ip': lab5_topology.devices[inventory_hostname].mgmt_ip,
+          'commands': lab5_precheck_commands,
+          'stdout': lab5_precheck_result.stdout
+        } | to_nice_json
+      }}
+    dest: "{{ playbook_dir }}/../artifacts/precheck/{{ inventory_hostname }}.json"
+    mode: "0644"
+  delegate_to: localhost

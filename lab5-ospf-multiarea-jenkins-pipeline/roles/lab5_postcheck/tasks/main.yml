@@ -1,0 +1,98 @@
+---
+- name: Load Lab 5 topology intent
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/lab5_topology.yml"
+    name: lab5_topology
+
+- name: Verify device exists in Lab 5 topology
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in lab5_topology.devices
+    fail_msg: "{{ inventory_hostname }} is not defined in vars/lab5_topology.yml"
+
+- name: Define postcheck commands
+  ansible.builtin.set_fact:
+    lab5_postcheck_commands:
+      - show clock
+      - show ip interface brief
+      - show ip ospf neighbor
+      - show ip ospf
+      - show ip route ospf
+
+- name: Ensure postcheck artifact directory exists
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/postcheck"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+
+- name: Collect device state after deployment
+  cisco.ios.ios_command:
+    commands: "{{ lab5_postcheck_commands }}"
+  register: lab5_postcheck_result
+  changed_when: false
+
+- name: Initialize expected OSPF neighbor count
+  ansible.builtin.set_fact:
+    lab5_expected_neighbor_count: 0
+
+- name: Calculate expected OSPF neighbor count from topology
+  ansible.builtin.set_fact:
+    lab5_expected_neighbor_count: "{{ lab5_expected_neighbor_count | int + 1 }}"
+  loop: "{{ lab5_topology.links }}"
+  when: inventory_hostname in (item.endpoints | map(attribute='device') | list)
+
+- name: Calculate observed FULL OSPF neighbors
+  ansible.builtin.set_fact:
+    lab5_observed_neighbor_count: >-
+      {{
+        lab5_postcheck_result.stdout[2]
+        | regex_findall('FULL')
+        | length
+      }}
+
+- name: Save postcheck evidence
+  ansible.builtin.copy:
+    content: |
+      {{
+        {
+          'device': inventory_hostname,
+          'management_ip': lab5_topology.devices[inventory_hostname].mgmt_ip,
+          'expected_ospf_neighbors': lab5_expected_neighbor_count | int,
+          'observed_full_ospf_neighbors': lab5_observed_neighbor_count | int,
+          'commands': lab5_postcheck_commands,
+          'stdout': lab5_postcheck_result.stdout
+        } | to_nice_json
+      }}
+    dest: "{{ playbook_dir }}/../artifacts/postcheck/{{ inventory_hostname }}.json"
+    mode: "0644"
+  delegate_to: localhost
+
+- name: Validate expected OSPF neighbors are FULL
+  ansible.builtin.assert:
+    that:
+      - lab5_observed_neighbor_count | int == lab5_expected_neighbor_count | int
+    fail_msg: >-
+      {{ inventory_hostname }} has {{ lab5_observed_neighbor_count }} FULL neighbors,
+      but {{ lab5_expected_neighbor_count }} were expected.
+    success_msg: >-
+      {{ inventory_hostname }} has all {{ lab5_expected_neighbor_count }} expected
+      OSPF neighbors in FULL state.
+
+- name: Validate expected ABR routers
+  ansible.builtin.assert:
+    that:
+      - "'area border router' in (lab5_postcheck_result.stdout[3] | lower)"
+    fail_msg: "{{ inventory_hostname }} is expected to operate as an ABR."
+    success_msg: "{{ inventory_hostname }} is operating as an ABR."
+  when: inventory_hostname in lab5_topology.validation.expected_abr
+
+- name: Validate expected inter-area routes
+  ansible.builtin.assert:
+    that:
+      - item in lab5_postcheck_result.stdout[4]
+      - "'O IA' in lab5_postcheck_result.stdout[4]"
+    fail_msg: "{{ inventory_hostname }} is missing expected O IA route {{ item }}."
+    success_msg: "{{ inventory_hostname }} learned expected O IA route {{ item }}."
+  loop: "{{ lab5_topology.validation.expected_inter_area_routes[inventory_hostname] | default([]) }}"
