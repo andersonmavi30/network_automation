@@ -1,0 +1,49 @@
+---
+- name: Verify NetBox token is available
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'NETBOX_TOKEN') | length > 0
+    fail_msg: "The NETBOX_TOKEN environment variable is not defined."
+    success_msg: "The NETBOX_TOKEN environment variable is available."
+
+- name: Ensure Nornir artifact directory exists
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/nornir"
+    state: directory
+    mode: "0755"
+
+- name: Run Lab 5 Nornir collection and validation
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/lab5_nornir_collect.py"
+      - "--netbox-url"
+      - "http://192.168.1.16:8000"
+      - "--site"
+      - "lab5"
+      - "--topology-file"
+      - "{{ playbook_dir }}/../vars/lab5_topology.yml"
+      - "--output-dir"
+      - "{{ playbook_dir }}/../artifacts/nornir"
+  environment:
+    NETBOX_TOKEN: "{{ lookup('env', 'NETBOX_TOKEN') }}"
+    NORNIR_USERNAME: "{{ ansible_user }}"
+    NORNIR_PASSWORD: "{{ ansible_password }}"
+    NORNIR_SECRET: "{{ ansible_become_password }}"
+  register: lab5_nornir_result
+  changed_when: false
+  no_log: true
+
+- name: Read Nornir validation summary
+  ansible.builtin.slurp:
+    src: "{{ playbook_dir }}/../artifacts/nornir/nornir_summary.json"
+  register: lab5_nornir_summary_file
+
+- name: Display Nornir validation summary
+  ansible.builtin.debug:
+    msg: >-
+      {{
+        lab5_nornir_summary_file.content
+        | b64decode
+        | from_json
+      }}
