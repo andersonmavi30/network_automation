@@ -1,0 +1,49 @@
+---
+- name: Verify NetBox token is available
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'NETBOX_TOKEN') | length > 0
+    fail_msg: "The NETBOX_TOKEN environment variable is not defined."
+    success_msg: "The NETBOX_TOKEN environment variable is available."
+
+- name: Ensure pyATS artifact directory exists
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/pyats"
+    state: directory
+    mode: "0755"
+
+- name: Run Lab 5 pyATS structured validation
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/lab5_pyats_validate.py"
+      - "--netbox-url"
+      - "http://192.168.1.16:8000"
+      - "--site"
+      - "lab5"
+      - "--topology-file"
+      - "{{ playbook_dir }}/../vars/lab5_topology.yml"
+      - "--output-dir"
+      - "{{ playbook_dir }}/../artifacts/pyats"
+  environment:
+    NETBOX_TOKEN: "{{ lookup('env', 'NETBOX_TOKEN') }}"
+    PYATS_USERNAME: "{{ ansible_user }}"
+    PYATS_PASSWORD: "{{ ansible_password }}"
+    PYATS_SECRET: "{{ ansible_become_password }}"
+  register: lab5_pyats_result
+  changed_when: false
+  no_log: true
+
+- name: Read pyATS validation summary
+  ansible.builtin.slurp:
+    src: "{{ playbook_dir }}/../artifacts/pyats/pyats_summary.json"
+  register: lab5_pyats_summary_file
+
+- name: Display pyATS validation summary
+  ansible.builtin.debug:
+    msg: >-
+      {{
+        lab5_pyats_summary_file.content
+        | b64decode
+        | from_json
+      }}
