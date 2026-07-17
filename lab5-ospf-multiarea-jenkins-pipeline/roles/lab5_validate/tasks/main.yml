@@ -1,0 +1,68 @@
+---
+- name: Ensure final validation artifact directory exists
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/validate"
+    state: directory
+    mode: "0755"
+
+- name: Run Lab 5 final validation
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/lab5_final_validate.py"
+      - "--artifacts-dir"
+      - "{{ playbook_dir }}/../artifacts"
+      - "--topology-file"
+      - "{{ playbook_dir }}/../vars/lab5_topology.yml"
+      - "--output-dir"
+      - "{{ playbook_dir }}/../artifacts/validate"
+  register: lab5_final_validation_result
+  changed_when: false
+  failed_when: false
+
+- name: Verify final validation summary was generated
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../artifacts/validate/lab5_validation_summary.json"
+  register: lab5_final_validation_summary_stat
+
+- name: Fail when final validation summary was not generated
+  ansible.builtin.assert:
+    that:
+      - lab5_final_validation_summary_stat.stat.exists
+    fail_msg: >-
+      The final validation summary was not generated.
+      Script return code: {{ lab5_final_validation_result.rc }}.
+      Error: {{ lab5_final_validation_result.stderr | default('No stderr output') }}
+
+- name: Read final validation summary
+  ansible.builtin.slurp:
+    src: "{{ playbook_dir }}/../artifacts/validate/lab5_validation_summary.json"
+  register: lab5_final_validation_summary_file
+
+- name: Parse final validation summary
+  ansible.builtin.set_fact:
+    lab5_final_validation_summary: >-
+      {{
+        lab5_final_validation_summary_file.content
+        | b64decode
+        | from_json
+      }}
+
+- name: Display final validation summary
+  ansible.builtin.debug:
+    var: lab5_final_validation_summary
+
+- name: Verify all Lab 5 validation stages passed
+  ansible.builtin.assert:
+    that:
+      - lab5_final_validation_result.rc == 0
+      - lab5_final_validation_summary.validation_passed | bool
+      - lab5_final_validation_summary.failed_stages | length == 0
+    fail_msg: >-
+      Lab 5 final validation failed.
+      Failed stages:
+      {{ lab5_final_validation_summary.failed_stages | join(', ') }}
+    success_msg: >-
+      Lab 5 final validation passed successfully.
+      Passed stages:
+      {{ lab5_final_validation_summary.passed_stages | join(', ') }}
