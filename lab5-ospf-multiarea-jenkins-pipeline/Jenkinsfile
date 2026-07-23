@@ -1,0 +1,211 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(
+            name: 'EXECUTE_PIPELINE',
+            defaultValue: false,
+            description: 'Activar únicamente cuando se quiera lanzar el pipeline completo en AWX'
+        )
+    }
+
+    environment {
+        AWX_URL           = 'http://192.168.1.18:30143'
+        AWX_TEMPLATE_NAME = 'Lab 5 - OSPF Multi-Area Pipeline'
+    }
+
+    stages {
+
+        stage('Obtener Job Template de AWX') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'awx-api-token',
+                        variable: 'AWX_TOKEN'
+                    )
+                ]) {
+                    script {
+                        def response = sh(
+                            returnStdout: true,
+                            script: '''
+                                set -e
+
+                                curl --silent \
+                                     --show-error \
+                                     --fail \
+                                     --get \
+                                     --header "Authorization: Bearer ${AWX_TOKEN}" \
+                                     --data-urlencode "name=${AWX_TEMPLATE_NAME}" \
+                                     "${AWX_URL}/api/v2/job_templates/"
+                            '''
+                        ).trim()
+
+                        def templateData =
+                            new groovy.json.JsonSlurperClassic()
+                                .parseText(response)
+
+                        if (templateData.count != 1) {
+                            error(
+                                "Se esperaba encontrar exactamente un Job Template, " +
+                                "pero AWX devolvió: ${templateData.count}"
+                            )
+                        }
+
+                        env.AWX_TEMPLATE_ID =
+                            templateData.results[0].id.toString()
+
+                        echo "Job Template localizado correctamente."
+                        echo "AWX Template ID: ${env.AWX_TEMPLATE_ID}"
+                    }
+                }
+            }
+        }
+
+        stage('Modo seguro') {
+            steps {
+                script {
+                    if (!params.EXECUTE_PIPELINE) {
+                        echo 'EXECUTE_PIPELINE está desactivado.'
+                        echo 'El Job Template fue localizado, pero NO será ejecutado.'
+
+                        currentBuild.description =
+                            "Validación segura - Template ID ${env.AWX_TEMPLATE_ID}"
+                    }
+                }
+            }
+        }
+
+        stage('Lanzar pipeline en AWX') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'awx-api-token',
+                        variable: 'AWX_TOKEN'
+                    )
+                ]) {
+                    script {
+                        def response = sh(
+                            returnStdout: true,
+                            script: '''
+                                set -e
+
+                                curl --silent \
+                                     --show-error \
+                                     --fail \
+                                     --request POST \
+                                     --header "Authorization: Bearer ${AWX_TOKEN}" \
+                                     --header "Content-Type: application/json" \
+                                     --data '{}' \
+                                     "${AWX_URL}/api/v2/job_templates/${AWX_TEMPLATE_ID}/launch/"
+                            '''
+                        ).trim()
+
+                        def launchData =
+                            new groovy.json.JsonSlurperClassic()
+                                .parseText(response)
+
+                        if (!launchData.job) {
+                            error(
+                                'AWX no devolvió el identificador del Job lanzado.'
+                            )
+                        }
+
+                        env.AWX_JOB_ID = launchData.job.toString()
+
+                        echo "Pipeline lanzado correctamente en AWX."
+                        echo "AWX Job ID: ${env.AWX_JOB_ID}"
+
+                        currentBuild.description =
+                            "AWX Job ${env.AWX_JOB_ID}"
+                    }
+                }
+            }
+        }
+
+        stage('Esperar resultado de AWX') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'awx-api-token',
+                        variable: 'AWX_TOKEN'
+                    )
+                ]) {
+                    script {
+                        timeout(time: 45, unit: 'MINUTES') {
+
+                            waitUntil(initialRecurrencePeriod: 5000) {
+
+                                def response = sh(
+                                    returnStdout: true,
+                                    script: '''
+                                        set -e
+
+                                        curl --silent \
+                                             --show-error \
+                                             --fail \
+                                             --header "Authorization: Bearer ${AWX_TOKEN}" \
+                                             "${AWX_URL}/api/v2/jobs/${AWX_JOB_ID}/"
+                                    '''
+                                ).trim()
+
+                                def jobData =
+                                    new groovy.json.JsonSlurperClassic()
+                                        .parseText(response)
+
+                                def awxStatus =
+                                    jobData.status.toString()
+
+                                echo "Estado actual del Job AWX: ${awxStatus}"
+
+                                if (awxStatus == 'successful') {
+                                    echo 'El pipeline de AWX finalizó correctamente.'
+                                    return true
+                                }
+
+                                if (
+                                    awxStatus in [
+                                        'failed',
+                                        'error',
+                                        'canceled'
+                                    ]
+                                ) {
+                                    error(
+                                        "El Job de AWX terminó con estado: ${awxStatus}"
+                                    )
+                                }
+
+                                return false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline de Jenkins finalizado correctamente.'
+        }
+
+        failure {
+            echo 'Pipeline de Jenkins finalizado con errores.'
+        }
+
+        always {
+            echo 'Fin de la integración Jenkins → AWX.'
+        }
+    }
+}
