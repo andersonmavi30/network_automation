@@ -10,7 +10,7 @@ pipeline {
     }
 
     environment {
-        AWX_URL           = 'http://192.168.1.18:30143'
+        AWX_URL           = 'http://192.168.1.13:30143'
         AWX_TEMPLATE_NAME = 'Lab 5 - OSPF Multi-Area Pipeline'
     }
 
