@@ -10,8 +10,9 @@ pipeline {
     }
 
     environment {
-        AWX_URL           = 'http://192.168.1.13:30143'
-        AWX_TEMPLATE_NAME = 'Lab 5 - OSPF Multi-Area Pipeline'
+        AWX_URL                  = 'http://192.168.1.13:30143'
+        AWX_TEMPLATE_NAME        = 'Lab 5 - OSPF Multi-Area Pipeline'
+        AWX_ROLLBACK_TEMPLATE_ID = '16'
     }
 
     stages {
@@ -54,7 +55,7 @@ pipeline {
                         env.AWX_TEMPLATE_ID =
                             templateData.results[0].id.toString()
 
-                        echo "Job Template localizado correctamente."
+                        echo 'Job Template localizado correctamente.'
                         echo "AWX Template ID: ${env.AWX_TEMPLATE_ID}"
                     }
                 }
@@ -118,7 +119,7 @@ pipeline {
 
                         env.AWX_JOB_ID = launchData.job.toString()
 
-                        echo "Pipeline lanzado correctamente en AWX."
+                        echo 'Pipeline lanzado correctamente en AWX.'
                         echo "AWX Job ID: ${env.AWX_JOB_ID}"
 
                         currentBuild.description =
@@ -201,7 +202,113 @@ pipeline {
         }
 
         failure {
-            echo 'Pipeline de Jenkins finalizado con errores.'
+            script {
+                echo 'Pipeline principal finalizado con errores.'
+
+                if (params.EXECUTE_PIPELINE && env.AWX_JOB_ID?.trim()) {
+
+                    withCredentials([
+                        string(
+                            credentialsId: 'awx-api-token',
+                            variable: 'AWX_TOKEN'
+                        )
+                    ]) {
+                        try {
+                            echo 'Iniciando rollback automático en AWX.'
+
+                            def response = sh(
+                                returnStdout: true,
+                                script: '''
+                                    set -e
+
+                                    curl --silent \
+                                         --show-error \
+                                         --fail \
+                                         --request POST \
+                                         --header "Authorization: Bearer ${AWX_TOKEN}" \
+                                         --header "Content-Type: application/json" \
+                                         --data '{}' \
+                                         "${AWX_URL}/api/v2/job_templates/${AWX_ROLLBACK_TEMPLATE_ID}/launch/"
+                                '''
+                            ).trim()
+
+                            def rollbackData =
+                                new groovy.json.JsonSlurperClassic()
+                                    .parseText(response)
+
+                            if (!rollbackData.job) {
+                                error(
+                                    'AWX no devolvió el ID del Job de rollback.'
+                                )
+                            }
+
+                            env.AWX_ROLLBACK_JOB_ID =
+                                rollbackData.job.toString()
+
+                            echo 'Rollback lanzado correctamente en AWX.'
+                            echo "AWX Rollback Job ID: ${env.AWX_ROLLBACK_JOB_ID}"
+
+                            currentBuild.description =
+                                "AWX Job ${env.AWX_JOB_ID} falló | Rollback ${env.AWX_ROLLBACK_JOB_ID}"
+
+                            timeout(time: 30, unit: 'MINUTES') {
+
+                                waitUntil(initialRecurrencePeriod: 5000) {
+
+                                    def rollbackResponse = sh(
+                                        returnStdout: true,
+                                        script: '''
+                                            set -e
+
+                                            curl --silent \
+                                                 --show-error \
+                                                 --fail \
+                                                 --header "Authorization: Bearer ${AWX_TOKEN}" \
+                                                 "${AWX_URL}/api/v2/jobs/${AWX_ROLLBACK_JOB_ID}/"
+                                        '''
+                                    ).trim()
+
+                                    def rollbackJobData =
+                                        new groovy.json.JsonSlurperClassic()
+                                            .parseText(rollbackResponse)
+
+                                    def rollbackStatus =
+                                        rollbackJobData.status.toString()
+
+                                    echo "Estado actual del rollback: ${rollbackStatus}"
+
+                                    if (rollbackStatus == 'successful') {
+                                        echo 'Rollback finalizado correctamente.'
+                                        echo 'Los routers quedaron limpios del Lab 5.'
+                                        return true
+                                    }
+
+                                    if (
+                                        rollbackStatus in [
+                                            'failed',
+                                            'error',
+                                            'canceled'
+                                        ]
+                                    ) {
+                                        error(
+                                            "El rollback terminó con estado: ${rollbackStatus}"
+                                        )
+                                    }
+
+                                    return false
+                                }
+                            }
+
+                        } catch (err) {
+                            echo "ERROR durante el rollback: ${err.getMessage()}"
+                            echo 'El rollback no pudo completarse correctamente.'
+                        }
+                    }
+
+                } else {
+                    echo 'No se ejecuta rollback porque el Job principal no llegó a iniciarse.'
+                }
+            }
         }
 
         always {
