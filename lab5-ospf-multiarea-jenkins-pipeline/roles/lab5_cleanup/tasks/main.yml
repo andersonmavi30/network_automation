@@ -1,0 +1,47 @@
+---
+- name: Build Lab 5 interface list for each router
+  ansible.builtin.set_fact:
+    lab5_cleanup_interfaces: >-
+      {{
+        (
+          links
+          | map(attribute='endpoints')
+          | flatten
+          | selectattr('device', 'equalto', inventory_hostname)
+          | map(attribute='interface')
+          | list
+        )
+        +
+        (
+          lans
+          | selectattr('gateway_device', 'equalto', inventory_hostname)
+          | map(attribute='gateway_interface')
+          | list
+        )
+        | unique
+        | list
+      }}
+
+- name: Remove Lab 5 OSPF process
+  cisco.ios.ios_config:
+    lines:
+      - "no router ospf {{ ospf.process_id }}"
+
+- name: Remove Lab 5 Loopback0
+  cisco.ios.ios_config:
+    lines:
+      - "no interface Loopback0"
+
+- name: Clean Lab 5 physical interfaces
+  cisco.ios.ios_config:
+    parents:
+      - "interface {{ item }}"
+    lines:
+      - no description
+      - no ip address
+      - shutdown
+  loop: "{{ lab5_cleanup_interfaces }}"
+
+- name: Save cleanup configuration
+  cisco.ios.ios_config:
+    save_when: modified
