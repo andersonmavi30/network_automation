@@ -4,6 +4,8 @@
   gather_facts: false
 
   vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
     - ../vars/lab5_topology.yml
 
   roles:

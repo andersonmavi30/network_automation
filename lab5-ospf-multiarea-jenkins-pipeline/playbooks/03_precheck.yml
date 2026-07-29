@@ -2,5 +2,10 @@
 - name: Lab 5 - Device precheck
   hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
+
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
+
   roles:
     - role: ../roles/lab5_precheck
