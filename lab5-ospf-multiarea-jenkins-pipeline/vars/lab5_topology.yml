@@ -105,7 +105,7 @@ lans:
     area: 10
     network: 10.10.40.0/24
     gateway_device: R4
-    gateway_interface: GigabitEthernet3
+    gateway_interface: GigabitEthernet4
     gateway_ip: 10.10.40.254/24
     pc_name: PC1
     pc_ip: 10.10.40.1/24
@@ -115,7 +115,7 @@ lans:
     area: 20
     network: 10.10.50.0/24
     gateway_device: R5
-    gateway_interface: GigabitEthernet3
+    gateway_interface: GigabitEthernet1
     gateway_ip: 10.10.50.254/24
     pc_name: PC2
     pc_ip: 10.10.50.1/24
