@@ -11,3 +11,4 @@ ansible_become_password: "{{ vault_ios_enable_password }}"
 
 ospf_process_id: 10
 lab_name: lab5-ospf-multiarea-jenkins-pipeline
+lab5_management_interface: GigabitEthernet3

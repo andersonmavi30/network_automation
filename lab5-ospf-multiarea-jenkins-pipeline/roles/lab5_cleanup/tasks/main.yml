@@ -1,24 +1,23 @@
 ---
-- name: Build Lab 5 interface list for each router
+- name: Build candidate Lab 5 link interface list
+  ansible.builtin.set_fact:
+    lab5_cleanup_candidate_interfaces: >-
+      {{
+        links
+        | map(attribute='endpoints')
+        | flatten
+        | selectattr('device', 'equalto', inventory_hostname)
+        | map(attribute='interface')
+        | unique
+        | list
+      }}
+
+- name: Exclude management interface from cleanup
   ansible.builtin.set_fact:
     lab5_cleanup_interfaces: >-
       {{
-        (
-          links
-          | map(attribute='endpoints')
-          | flatten
-          | selectattr('device', 'equalto', inventory_hostname)
-          | map(attribute='interface')
-          | list
-        )
-        +
-        (
-          lans
-          | selectattr('gateway_device', 'equalto', inventory_hostname)
-          | map(attribute='gateway_interface')
-          | list
-        )
-        | unique
+        lab5_cleanup_candidate_interfaces
+        | reject('equalto', lab5_management_interface)
         | list
       }}
 
@@ -30,9 +29,9 @@
 - name: Remove Lab 5 Loopback0
   cisco.ios.ios_config:
     lines:
-      - "no interface Loopback0"
+      - no interface Loopback0
 
-- name: Clean Lab 5 physical interfaces
+- name: Clean Lab 5 link interfaces
   cisco.ios.ios_config:
     parents:
       - "interface {{ item }}"
