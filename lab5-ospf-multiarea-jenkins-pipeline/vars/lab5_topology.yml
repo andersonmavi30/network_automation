@@ -1,21 +1,18 @@
 ---
-lab_id: lab5
-lab_name: ospf_multiarea_jenkins_pipeline
-
 ospf:
   process_id: 10
   router_id_source: loopback0
 
 devices:
   R1:
-    role: backbone_router
+    role: backbone
     mgmt_ip: 172.30.30.41
     loopback0: 1.1.1.1/32
     ospf_areas:
       - 0
 
   R2:
-    role: abr_area_0_10
+    role: abr_area_10
     mgmt_ip: 172.30.30.42
     loopback0: 2.2.2.2/32
     ospf_areas:
@@ -23,7 +20,7 @@ devices:
       - 10
 
   R3:
-    role: abr_area_0_20
+    role: abr_area_20
     mgmt_ip: 172.30.30.43
     loopback0: 3.3.3.3/32
     ospf_areas:
@@ -50,10 +47,10 @@ links:
     network: 10.0.12.0/30
     endpoints:
       - device: R1
-        interface: GigabitEthernet2
+        interface: GigabitEthernet4
         ip: 10.0.12.1/30
       - device: R2
-        interface: GigabitEthernet2
+        interface: GigabitEthernet4
         ip: 10.0.12.2/30
 
   - name: R1_R3
@@ -61,10 +58,10 @@ links:
     network: 10.0.13.0/30
     endpoints:
       - device: R1
-        interface: GigabitEthernet3
+        interface: GigabitEthernet1
         ip: 10.0.13.1/30
       - device: R3
-        interface: GigabitEthernet2
+        interface: GigabitEthernet1
         ip: 10.0.13.2/30
 
   - name: R2_R3
@@ -72,10 +69,10 @@ links:
     network: 10.0.23.0/30
     endpoints:
       - device: R2
-        interface: GigabitEthernet3
+        interface: GigabitEthernet2
         ip: 10.0.23.1/30
       - device: R3
-        interface: GigabitEthernet3
+        interface: GigabitEthernet2
         ip: 10.0.23.2/30
 
   - name: R2_R4
@@ -83,10 +80,10 @@ links:
     network: 10.0.24.0/30
     endpoints:
       - device: R2
-        interface: GigabitEthernet4
+        interface: GigabitEthernet1
         ip: 10.0.24.1/30
       - device: R4
-        interface: GigabitEthernet2
+        interface: GigabitEthernet1
         ip: 10.0.24.2/30
 
   - name: R3_R5
@@ -97,7 +94,7 @@ links:
         interface: GigabitEthernet4
         ip: 10.0.35.1/30
       - device: R5
-        interface: GigabitEthernet2
+        interface: GigabitEthernet4
         ip: 10.0.35.2/30
 
 lans:
@@ -130,6 +127,7 @@ validation:
     R4:
       - 10.10.50.0/24
       - 5.5.5.5/32
+
     R5:
       - 10.10.40.0/24
       - 4.4.4.4/32
@@ -137,5 +135,6 @@ validation:
   expected_reachability:
     - source: PC1
       destination: 10.10.50.1
+
     - source: PC2
       destination: 10.10.40.1
