@@ -19,6 +19,16 @@
       - show ip ospf
       - show ip route ospf
 
+- name: Define expected inter-area routes
+  ansible.builtin.set_fact:
+    lab5_expected_inter_area_routes: >-
+      {{
+        lab5_topology.validation.expected_inter_area_routes.get(
+          inventory_hostname,
+          []
+        )
+      }}
+
 - name: Ensure postcheck artifact directory exists
   ansible.builtin.file:
     path: "{{ playbook_dir }}/../artifacts/postcheck"
@@ -33,9 +43,12 @@
 
 - name: Calculate expected OSPF neighbor count from topology
   ansible.builtin.set_fact:
-    lab5_expected_neighbor_count: "{{ lab5_expected_neighbor_count | int + 1 }}"
+    lab5_expected_neighbor_count: >-
+      {{ lab5_expected_neighbor_count | int + 1 }}
   loop: "{{ lab5_topology.links }}"
-  when: inventory_hostname in (item.endpoints | map(attribute='device') | list)
+  when:
+    - inventory_hostname in
+      (item.endpoints | map(attribute='device') | list)
 
 - name: Wait for expected OSPF neighbors to reach FULL state
   cisco.ios.ios_command:
@@ -51,6 +64,26 @@
       | regex_findall('FULL/')
       | length
     ) == (lab5_expected_neighbor_count | int)
+
+- name: Wait for and validate expected inter-area routes
+  cisco.ios.ios_command:
+    commands:
+      - "show ip route {{ item.split('/')[0] }}"
+  register: lab5_inter_area_route_result
+  changed_when: false
+  retries: 18
+  delay: 5
+  until: >-
+    (
+      'known via "ospf' in
+      (lab5_inter_area_route_result.stdout[0] | lower)
+    )
+    and
+    (
+      'type inter area' in
+      (lab5_inter_area_route_result.stdout[0] | lower)
+    )
+  loop: "{{ lab5_expected_inter_area_routes }}"
 
 - name: Collect device state after OSPF convergence
   cisco.ios.ios_command:
@@ -76,6 +109,7 @@
           'management_ip': lab5_topology.devices[inventory_hostname].mgmt_ip,
           'expected_ospf_neighbors': lab5_expected_neighbor_count | int,
           'observed_full_ospf_neighbors': lab5_observed_neighbor_count | int,
+          'expected_inter_area_routes': lab5_expected_inter_area_routes,
           'commands': lab5_postcheck_commands,
           'stdout': lab5_postcheck_result.stdout
         } | to_nice_json
@@ -87,27 +121,29 @@
 - name: Validate expected OSPF neighbors are FULL
   ansible.builtin.assert:
     that:
-      - lab5_observed_neighbor_count | int == lab5_expected_neighbor_count | int
+      - >-
+        lab5_observed_neighbor_count | int
+        ==
+        lab5_expected_neighbor_count | int
     fail_msg: >-
-      {{ inventory_hostname }} has {{ lab5_observed_neighbor_count }} FULL neighbors,
+      {{ inventory_hostname }} has
+      {{ lab5_observed_neighbor_count }} FULL neighbors,
       but {{ lab5_expected_neighbor_count }} were expected.
     success_msg: >-
-      {{ inventory_hostname }} has all {{ lab5_expected_neighbor_count }} expected
-      OSPF neighbors in FULL state.
+      {{ inventory_hostname }} has all
+      {{ lab5_expected_neighbor_count }} expected OSPF
+      neighbors in FULL state.
 
 - name: Validate expected ABR routers
   ansible.builtin.assert:
     that:
-      - "'area border router' in (lab5_postcheck_result.stdout[3] | lower)"
-    fail_msg: "{{ inventory_hostname }} is expected to operate as an ABR."
-    success_msg: "{{ inventory_hostname }} is operating as an ABR."
-  when: inventory_hostname in lab5_topology.validation.expected_abr
-
-- name: Validate expected inter-area routes
-  ansible.builtin.assert:
-    that:
-      - item in lab5_postcheck_result.stdout[4]
-      - "'O IA' in lab5_postcheck_result.stdout[4]"
-    fail_msg: "{{ inventory_hostname }} is missing expected O IA route {{ item }}."
-    success_msg: "{{ inventory_hostname }} learned expected O IA route {{ item }}."
-  loop: "{{ lab5_topology.validation.expected_inter_area_routes[inventory_hostname] | default([]) }}"
+      - >-
+        'area border router' in
+        (lab5_postcheck_result.stdout[3] | lower)
+    fail_msg: >-
+      {{ inventory_hostname }} is expected to operate as an ABR.
+    success_msg: >-
+      {{ inventory_hostname }} is operating as an ABR.
+  when:
+    - inventory_hostname in
+      lab5_topology.validation.expected_abr
