@@ -32,18 +32,60 @@
     PYATS_SECRET: "{{ ansible_become_password }}"
   register: lab5_pyats_result
   changed_when: false
+  failed_when: false
   no_log: true
+
+- name: Display sanitized pyATS command result
+  ansible.builtin.debug:
+    msg:
+      return_code: "{{ lab5_pyats_result.rc }}"
+      stdout: "{{ lab5_pyats_result.stdout | default('No stdout output') }}"
+      stderr: "{{ lab5_pyats_result.stderr | default('No stderr output') }}"
+
+- name: Check whether pyATS validation summary exists
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../artifacts/pyats/pyats_summary.json"
+  register: lab5_pyats_summary_stat
 
 - name: Read pyATS validation summary
   ansible.builtin.slurp:
     src: "{{ playbook_dir }}/../artifacts/pyats/pyats_summary.json"
   register: lab5_pyats_summary_file
+  when:
+    - lab5_pyats_summary_stat.stat.exists
 
-- name: Display pyATS validation summary
-  ansible.builtin.debug:
-    msg: >-
+- name: Parse pyATS validation summary
+  ansible.builtin.set_fact:
+    lab5_pyats_summary: >-
       {{
         lab5_pyats_summary_file.content
         | b64decode
         | from_json
       }}
+  when:
+    - lab5_pyats_summary_stat.stat.exists
+
+- name: Display pyATS validation summary
+  ansible.builtin.debug:
+    var: lab5_pyats_summary
+  when:
+    - lab5_pyats_summary_stat.stat.exists
+
+- name: Verify pyATS validation passed
+  ansible.builtin.assert:
+    that:
+      - lab5_pyats_result.rc == 0
+      - lab5_pyats_summary_stat.stat.exists
+      - (lab5_pyats_summary | default({})).get('validation_passed', false) | bool
+    fail_msg: >-
+      Lab 5 pyATS validation failed.
+      Return code: {{ lab5_pyats_result.rc }}.
+      Failed devices:
+      {{
+        (lab5_pyats_summary | default({}))
+        .get('failed_devices', ['Summary unavailable'])
+        | join(', ')
+      }}.
+      Output: {{ lab5_pyats_result.stdout | default('No stdout output') }}.
+      Error: {{ lab5_pyats_result.stderr | default('No stderr output') }}
+    success_msg: "Lab 5 pyATS validation passed successfully."
