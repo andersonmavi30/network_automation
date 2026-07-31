@@ -27,12 +27,6 @@
   delegate_to: localhost
   run_once: true
 
-- name: Collect device state after deployment
-  cisco.ios.ios_command:
-    commands: "{{ lab5_postcheck_commands }}"
-  register: lab5_postcheck_result
-  changed_when: false
-
 - name: Initialize expected OSPF neighbor count
   ansible.builtin.set_fact:
     lab5_expected_neighbor_count: 0
@@ -43,12 +37,33 @@
   loop: "{{ lab5_topology.links }}"
   when: inventory_hostname in (item.endpoints | map(attribute='device') | list)
 
+- name: Wait for expected OSPF neighbors to reach FULL state
+  cisco.ios.ios_command:
+    commands:
+      - show ip ospf neighbor
+  register: lab5_ospf_convergence_result
+  changed_when: false
+  retries: 18
+  delay: 5
+  until: >-
+    (
+      lab5_ospf_convergence_result.stdout[0]
+      | regex_findall('\bFULL\b')
+      | length
+    ) == (lab5_expected_neighbor_count | int)
+
+- name: Collect device state after OSPF convergence
+  cisco.ios.ios_command:
+    commands: "{{ lab5_postcheck_commands }}"
+  register: lab5_postcheck_result
+  changed_when: false
+
 - name: Calculate observed FULL OSPF neighbors
   ansible.builtin.set_fact:
     lab5_observed_neighbor_count: >-
       {{
         lab5_postcheck_result.stdout[2]
-        | regex_findall('FULL')
+        | regex_findall('\bFULL\b')
         | length
       }}
 
