@@ -48,7 +48,7 @@
   until: >-
     (
       lab5_ospf_convergence_result.stdout[0]
-      | regex_findall('\bFULL\b')
+      | regex_findall('FULL/')
       | length
     ) == (lab5_expected_neighbor_count | int)
 
@@ -63,7 +63,7 @@
     lab5_observed_neighbor_count: >-
       {{
         lab5_postcheck_result.stdout[2]
-        | regex_findall('\bFULL\b')
+        | regex_findall('FULL/')
         | length
       }}
 
