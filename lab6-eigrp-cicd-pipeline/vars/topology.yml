@@ -1,0 +1,128 @@
+---
+lab:
+  name: LAB6
+  description: "Lab 6 - EIGRP CI/CD + APIs"
+
+defaults:
+  device_type: "Cisco CSR1000v"
+  platform: "Cisco IOS XE"
+  role: "router"
+  status: "active"
+
+devices:
+
+  R1:
+    management_ip: "172.30.30.41/26"
+    interfaces:
+      GigabitEthernet1:
+        ip: "10.0.24.1/30"
+        type: "p2p"
+        peer: "R6"
+      GigabitEthernet2:
+        ip: "192.168.10.254/24"
+        type: "lan"
+      GigabitEthernet3:
+        ip: "172.30.30.41/26"
+        type: "management"
+      GigabitEthernet4:
+        ip: "10.0.35.1/30"
+        type: "p2p"
+        peer: "R2"
+
+  R2:
+    management_ip: "172.30.30.42/26"
+    interfaces:
+      GigabitEthernet1:
+        ip: "10.0.23.1/30"
+        type: "p2p"
+        peer: "R5"
+      GigabitEthernet2:
+        ip: "10.10.40.1/30"
+        type: "p2p"
+        peer: "R3"
+      GigabitEthernet3:
+        ip: "172.30.30.42/26"
+        type: "management"
+      GigabitEthernet4:
+        ip: "10.0.35.2/30"
+        type: "p2p"
+        peer: "R1"
+      GigabitEthernet5:
+        ip: "192.168.20.254/24"
+        type: "lan"
+
+  R3:
+    management_ip: "172.30.30.43/26"
+    interfaces:
+      GigabitEthernet1:
+        ip: "10.10.50.1/30"
+        type: "p2p"
+        peer: "R4"
+      GigabitEthernet2:
+        ip: "10.10.40.2/30"
+        type: "p2p"
+        peer: "R2"
+      GigabitEthernet3:
+        ip: "172.30.30.43/26"
+        type: "management"
+      GigabitEthernet4:
+        ip: "192.168.30.254/24"
+        type: "lan"
+
+  R4:
+    management_ip: "172.30.30.44/26"
+    interfaces:
+      GigabitEthernet1:
+        ip: "10.10.50.2/30"
+        type: "p2p"
+        peer: "R3"
+      GigabitEthernet2:
+        ip: "10.0.13.1/30"
+        type: "p2p"
+        peer: "R5"
+      GigabitEthernet3:
+        ip: "172.30.30.44/26"
+        type: "management"
+      GigabitEthernet4:
+        ip: "192.168.40.254/24"
+        type: "lan"
+
+  R5:
+    management_ip: "172.30.30.45/26"
+    interfaces:
+      GigabitEthernet1:
+        ip: "10.0.23.2/30"
+        type: "p2p"
+        peer: "R2"
+      GigabitEthernet2:
+        ip: "10.0.13.2/30"
+        type: "p2p"
+        peer: "R4"
+      GigabitEthernet3:
+        ip: "172.30.30.45/26"
+        type: "management"
+      GigabitEthernet4:
+        ip: "10.0.12.2/30"
+        type: "p2p"
+        peer: "R6"
+      GigabitEthernet5:
+        ip: "192.168.50.254/24"
+        type: "lan"
+
+  R6:
+    management_ip: "172.30.30.46/26"
+    interfaces:
+      GigabitEthernet1:
+        ip: "10.0.24.2/30"
+        type: "p2p"
+        peer: "R1"
+      GigabitEthernet2:
+        ip: "192.168.60.254/24"
+        type: "lan"
+      GigabitEthernet3:
+        ip: "172.30.30.46/26"
+        type: "management"
+      GigabitEthernet4:
+        ip: "10.0.12.1/30"
+        type: "p2p"
+        peer: "R5"
