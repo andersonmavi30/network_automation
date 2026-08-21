@@ -1,0 +1,56 @@
+---
+- name: Crear directorios de artifacts para Batfish
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ playbook_dir }}/../artifacts/batfish"
+    - "{{ playbook_dir }}/../artifacts/batfish/snapshot"
+    - "{{ playbook_dir }}/../artifacts/batfish/snapshot/configs"
+    - "{{ playbook_dir }}/../artifacts/batfish/output"
+
+- name: Limpiar candidate configs anteriores del snapshot
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/batfish/snapshot/configs"
+    state: absent
+
+- name: Recrear directorio de candidate configs
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/batfish/snapshot/configs"
+    state: directory
+    mode: "0755"
+
+- name: Copiar candidate configs completas al snapshot Batfish
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ playbook_dir }}/../artifacts/batfish/snapshot/configs/{{ item | basename }}"
+    mode: "0644"
+  loop: >-
+    {{
+      lookup(
+        'ansible.builtin.fileglob',
+        playbook_dir + '/../artifacts/batfish/candidates/R*.cfg',
+        wantlist=True
+      )
+    }}
+
+- name: Ejecutar validacion Batfish pre-deploy
+  ansible.builtin.command:
+    cmd: >-
+      python3
+      {{ role_path }}/files/lab6_batfish_validate.py
+      --snapshot-dir
+      {{ playbook_dir }}/../artifacts/batfish/snapshot
+      --output-dir
+      {{ playbook_dir }}/../artifacts/batfish/output
+  environment:
+    BATFISH_HOST: "{{ batfish_host }}"
+    BATFISH_NETWORK: "{{ batfish_network }}"
+    BATFISH_SNAPSHOT: "{{ batfish_snapshot }}"
+  register: lab6_batfish_result
+  changed_when: false
+
+- name: Mostrar resultado Batfish
+  ansible.builtin.debug:
+    var: lab6_batfish_result.stdout_lines

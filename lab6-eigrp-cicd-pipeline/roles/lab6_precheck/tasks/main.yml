@@ -1,0 +1,68 @@
+---
+- name: Recolectar estado pre-deploy
+  cisco.ios.ios_command:
+    commands:
+      - show running-config | include ^hostname
+      - show ip interface brief | include ^GigabitEthernet3
+      - show running-config | section ^router eigrp
+  register: lab6_precheck_output
+
+- name: Construir datos del precheck
+  ansible.builtin.set_fact:
+    lab6_precheck_hostname: "{{ lab6_precheck_output.stdout[0] | trim }}"
+    lab6_precheck_management: "{{ lab6_precheck_output.stdout[1] | trim }}"
+    lab6_precheck_eigrp: "{{ lab6_precheck_output.stdout[2] | trim }}"
+
+- name: Validar hostname
+  ansible.builtin.assert:
+    that:
+      - "'hostname ' ~ inventory_hostname in lab6_precheck_hostname"
+    fail_msg: "Hostname incorrecto en {{ inventory_hostname }}"
+    success_msg: "Hostname correcto en {{ inventory_hostname }}"
+
+- name: Validar interfaz de management
+  ansible.builtin.assert:
+    that:
+      - lab6_management_interface in lab6_precheck_management
+      - ansible_host in lab6_precheck_management
+      - lab6_precheck_management is regex('.*up\\s+up$')
+    fail_msg: >-
+      Management incorrecto en {{ inventory_hostname }}.
+      Esperado={{ lab6_management_interface }} IP={{ ansible_host }}
+    success_msg: >-
+      Management {{ lab6_management_interface }} de
+      {{ inventory_hostname }} esta UP/UP con IP correcta.
+
+- name: Validar que EIGRP aun no este desplegado
+  ansible.builtin.assert:
+    that:
+      - lab6_precheck_eigrp | length == 0
+    fail_msg: >-
+      {{ inventory_hostname }} ya contiene configuracion EIGRP
+      antes del deploy.
+    success_msg: >-
+      {{ inventory_hostname }} no tiene EIGRP configurado.
+
+- name: Crear directorio de artifacts del precheck
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/precheck"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+
+- name: Guardar evidencia precheck por dispositivo
+  ansible.builtin.copy:
+    dest: >-
+      {{ playbook_dir }}/../artifacts/precheck/{{ inventory_hostname }}.json
+    mode: "0644"
+    content: |
+      {
+        "device": "{{ inventory_hostname }}",
+        "management_ip": "{{ ansible_host }}",
+        "management_interface": "{{ lab6_management_interface }}",
+        "hostname_validation": "PASS",
+        "management_validation": "PASS",
+        "eigrp_preexisting": false,
+        "validation": "PASS"
+      }
+  delegate_to: localhost

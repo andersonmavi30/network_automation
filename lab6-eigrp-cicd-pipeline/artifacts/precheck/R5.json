@@ -1,0 +1,1 @@
+{"device": "R5", "management_ip": "172.30.30.45", "management_interface": "GigabitEthernet3", "hostname_validation": "PASS", "management_validation": "PASS", "eigrp_preexisting": false, "validation": "PASS"}

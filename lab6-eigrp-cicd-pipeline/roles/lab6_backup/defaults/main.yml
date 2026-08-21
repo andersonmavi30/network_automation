@@ -1,0 +1,6 @@
+---
+lab6_backup_base_directory: >-
+  {{ playbook_dir }}/../artifacts/backups/pre_change
+
+lab6_backup_directory: >-
+  {{ lab6_backup_base_directory }}

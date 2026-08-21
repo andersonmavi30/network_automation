@@ -1,0 +1,7 @@
+File_Name,Status,File_Format,Nodes
+configs/R1.cfg,PASSED,CISCO_IOS,['r1']
+configs/R2.cfg,PASSED,CISCO_IOS,['r2']
+configs/R3.cfg,PASSED,CISCO_IOS,['r3']
+configs/R4.cfg,PASSED,CISCO_IOS,['r4']
+configs/R5.cfg,PASSED,CISCO_IOS,['r5']
+configs/R6.cfg,PASSED,CISCO_IOS,['r6']

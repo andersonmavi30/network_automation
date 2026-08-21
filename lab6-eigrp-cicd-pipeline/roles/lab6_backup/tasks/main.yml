@@ -1,0 +1,77 @@
+---
+- name: Obtener running-config del router
+  cisco.ios.ios_command:
+    commands:
+      - show running-config
+  register: lab6_running_config
+  no_log: true
+
+- name: Validar que se obtuvo una configuracion
+  ansible.builtin.assert:
+    that:
+      - lab6_running_config.stdout is defined
+      - lab6_running_config.stdout | length > 0
+      - lab6_running_config.stdout[0] | length > 0
+      - "'hostname ' ~ inventory_hostname in lab6_running_config.stdout[0]"
+    fail_msg: >-
+      No fue posible obtener o validar el running-config de
+      {{ inventory_hostname }}.
+    success_msg: >-
+      Running-config de {{ inventory_hostname }} obtenido correctamente.
+
+- name: Crear directorio local de backups pre-change
+  ansible.builtin.file:
+    path: "{{ lab6_backup_directory }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+
+- name: Guardar backup pre-change
+  ansible.builtin.copy:
+    content: "{{ lab6_running_config.stdout[0] | trim }}\n"
+    dest: "{{ lab6_backup_directory }}/{{ inventory_hostname }}.cfg"
+    mode: "0600"
+  delegate_to: localhost
+  no_log: true
+
+- name: Verificar archivo de backup generado
+  ansible.builtin.stat:
+    path: "{{ lab6_backup_directory }}/{{ inventory_hostname }}.cfg"
+  delegate_to: localhost
+  register: lab6_backup_file
+
+- name: Validar archivo de backup
+  ansible.builtin.assert:
+    that:
+      - lab6_backup_file.stat.exists
+      - lab6_backup_file.stat.isreg
+      - lab6_backup_file.stat.size > 0
+    fail_msg: >-
+      El archivo de backup de {{ inventory_hostname }}
+      no existe o esta vacio.
+    success_msg: >-
+      Backup pre-change de {{ inventory_hostname }} validado correctamente.
+
+- name: Generar resumen JSON de backups pre-change
+  ansible.builtin.copy:
+    dest: "{{ lab6_backup_directory }}/backup_summary.json"
+    mode: "0600"
+    content: |
+      {
+        "lab": "{{ lab_name }}",
+        "stage": "pre_change",
+        "generated_at_utc": "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}",
+        "expected_devices": {{ ansible_play_hosts_all | length }},
+        "backups": [
+      {% for host in ansible_play_hosts_all %}
+          {
+            "device": "{{ host }}",
+            "file": "{{ host }}.cfg",
+            "size_bytes": {{ hostvars[host].lab6_backup_file.stat.size | default(0) }},
+            "status": "{{ 'ok' if (hostvars[host].lab6_backup_file.stat.exists | default(false)) else 'missing' }}"
+          }{% if not loop.last %},{% endif %}
+      {% endfor %}
+        ]
+      }
+  delegate_to: localhost
+  run_once: true
