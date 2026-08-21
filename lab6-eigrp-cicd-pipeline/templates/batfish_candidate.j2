@@ -1,0 +1,33 @@
+hostname {{ router_name }}
+!
+{% for interface_name, interface in interfaces.items() %}
+interface {{ interface_name }}
+ description {{ interface.description }}
+ ip address {{ interface.ip_address }} {{ interface.netmask }}
+ no shutdown
+!
+{% endfor %}
+
+router eigrp LAB6
+ !
+ address-family ipv4 unicast autonomous-system 100
+  !
+  af-interface default
+   passive-interface
+  exit-af-interface
+{% for interface_name, interface in interfaces.items() %}
+{% if interface.type == "p2p" %}
+  !
+  af-interface {{ interface_name }}
+   no passive-interface
+  exit-af-interface
+{% endif %}
+{% endfor %}
+  !
+  topology base
+  exit-af-topology
+{% for network in networks %}
+  network {{ network.network_address }} {{ network.wildcard }}
+{% endfor %}
+ exit-address-family
+!

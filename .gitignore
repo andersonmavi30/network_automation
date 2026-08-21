@@ -1,2 +1,8 @@
 nornir.log
 __pycache__/
+
+# Lab 6 - Backups reales pre-change
+lab6-eigrp-cicd-pipeline/artifacts/backups/pre_change/*.cfg
+
+# Lab 6 - Snapshot temporal Batfish
+lab6-eigrp-cicd-pipeline/artifacts/batfish/snapshot/

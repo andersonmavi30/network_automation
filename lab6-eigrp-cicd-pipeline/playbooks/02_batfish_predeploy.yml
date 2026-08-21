@@ -1,0 +1,7 @@
+---
+- name: Lab 6 - Batfish pre-deploy validation
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - role: lab6_batfish

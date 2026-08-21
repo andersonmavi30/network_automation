@@ -1,0 +1,11 @@
+---
+- name: Lab 6 - Prechecks
+  hosts: all
+  gather_facts: false
+
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
+
+  roles:
+    - role: lab6_precheck

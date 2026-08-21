@@ -1,0 +1,4 @@
+---
+batfish_host: "127.0.0.1"
+batfish_network: "lab6"
+batfish_snapshot: "lab6_eigrp_predeploy"
