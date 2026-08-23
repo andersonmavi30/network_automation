@@ -1,191 +1,193 @@
 # Network Automation (NetDevOps Labs)
 
-Repositorio de **automatización de redes estilo Infrastructure as Code** sobre dispositivos Cisco (IOSv, CSR1000v) en un entorno de laboratorio (PNETLab). Está organizado como una serie de laboratorios progresivos (**Lab 2 a Lab 6**) que construyen, cada uno, un pipeline completo de configuración y validación de red.
+> 🌐 [Versión en español](README.es.md)
 
-No es una aplicación ni un paquete instalable: es una colección de pipelines donde **Git es la Source of Truth** y cada cambio de red sigue el mismo flujo:
+A **network automation repository built as Infrastructure as Code** on Cisco devices (IOSv, CSR1000v) in a lab environment (PNETLab). It is organized as a series of progressive labs (**Lab 2 to Lab 6**), each building a complete network configuration and validation pipeline.
 
-1. **Intent** — topología/intención declarativa en YAML versionada en Git.
-2. **Render** — generación de configuraciones con plantillas **Jinja2**.
-3. **Validación pre-deploy** con **Batfish** (labs 5 y 6).
-4. **Precheck** — verificación del estado actual de los dispositivos.
-5. **Deploy** — con Ansible (`cisco.ios.ios_config`, conexión `network_cli` + libssh) o Netmiko (lab 3).
-6. **Postcheck** y recolección de evidencia con **Nornir**.
-7. **Validación** con **pyATS / Genie** y generación de artefactos en `artifacts/`.
+This is not an application or an installable package: it is a collection of pipelines where **Git is the Source of Truth** and every network change follows the same flow:
 
-## Componentes de plataforma
+1. **Intent** — declarative topology/intent in YAML versioned in Git.
+2. **Render** — configuration generation with **Jinja2** templates.
+3. **Pre-deploy validation** with **Batfish** (labs 5 and 6).
+4. **Precheck** — verification of the current device state.
+5. **Deploy** — with Ansible (`cisco.ios.ios_config`, `network_cli` connection + libssh) or Netmiko (lab 3).
+6. **Postcheck** and evidence collection with **Nornir**.
+7. **Validation** with **pyATS / Genie** and artifact generation in `artifacts/`.
 
-| Componente | URL / Detalle | Rol |
-|------------|---------------|-----|
-| **NetBox** | `http://192.168.1.16:8000` | Source of Truth e inventario dinámico (`netbox.netbox.nb_inventory`) |
-| **AWX** | `http://192.168.1.13:30143` | Orquestador de Job Templates |
-| **Jenkins** | — | Dispara los Job Templates de AWX vía API REST (Lab 5), con rollback automático |
-| **Red de gestión** | `172.30.30.0/26` | Conectividad OOB hacia todos los dispositivos |
+## Platform components
 
-## Estructura del repositorio
+| Component | URL / Detail | Role |
+|-----------|--------------|------|
+| **NetBox** | `http://192.168.1.16:8000` | Source of Truth and dynamic inventory (`netbox.netbox.nb_inventory`) |
+| **AWX** | `http://192.168.1.13:30143` | Job Template orchestrator |
+| **Jenkins** | — | Triggers AWX Job Templates via REST API (Lab 5), with automatic rollback |
+| **Management network** | `172.30.30.0/26` | OOB connectivity to all devices |
+
+## Repository structure
 
 ```
-├── ansible.cfg                     # Config global: inventario NetBox, libssh legacy
-├── collections/requirements.yml    # Colecciones Ansible requeridas
-├── inventories/netbox/             # Inventario dinámico (plugin nb_inventory)
-├── group_vars/                     # Vars de conexión Cisco IOS (raíz)
-├── execution-environments/         # Containerfiles para AWX Execution Environments
-│   ├── iosv/                       # EE mínimo (ansible-core 2.15.13) para IOSv
-│   └── lab5-csr1000v/              # EE completo (nornir, pyats, genie, pybatfish...)
-├── scripts/netbox/                 # Bootstrap de NetBox desde intent (labs 4 y 5)
-├── shared/                         # Inventario Nornir y scripts compartidos (Lab 2)
-├── playbooks/awx/                  # Smoke test de AWX (show_version.yml)
-├── docs/                           # Documentación de fases
-├── lab2-inter-vlan/                # Lab 2: Inter-VLAN routing (pipeline Ansible)
-├── lab3-router-on-a-stick/         # Lab 3: Router-on-a-Stick (pipeline Python)
-├── lab4-ospf-ansible-pipeline/     # Lab 4: OSPF single-area (100 % Ansible)
-├── lab5-ospf-multiarea-jenkins-pipeline/  # Lab 5: OSPF multi-área + Jenkins/AWX
-└── lab6-eigrp-cicd-pipeline/       # Lab 6: EIGRP + CI/CD + APIs (en progreso)
+├── ansible.cfg                     # Global config: NetBox inventory, legacy libssh
+├── collections/requirements.yml    # Required Ansible collections
+├── inventories/netbox/             # Dynamic inventory (nb_inventory plugin)
+├── group_vars/                     # Cisco IOS connection vars (root)
+├── execution-environments/         # Containerfiles for AWX Execution Environments
+│   ├── iosv/                       # Minimal EE (ansible-core 2.15.13) for IOSv
+│   └── lab5-csr1000v/              # Full EE (nornir, pyats, genie, pybatfish...)
+├── scripts/netbox/                 # NetBox bootstrap from intent (labs 4 and 5)
+├── shared/                         # Shared Nornir inventory and scripts (Lab 2)
+├── playbooks/awx/                  # AWX smoke test (show_version.yml)
+├── docs/                           # Phase documentation
+├── lab2-inter-vlan/                # Lab 2: Inter-VLAN routing (Ansible pipeline)
+├── lab3-router-on-a-stick/         # Lab 3: Router-on-a-Stick (Python pipeline)
+├── lab4-ospf-ansible-pipeline/     # Lab 4: OSPF single-area (100% Ansible)
+├── lab5-ospf-multiarea-jenkins-pipeline/  # Lab 5: OSPF multi-area + Jenkins/AWX
+└── lab6-eigrp-cicd-pipeline/       # Lab 6: EIGRP + CI/CD + APIs (in progress)
 ```
 
-## Laboratorios
+## Labs
 
-Cada lab es **autocontenido** (propios `ansible.cfg`, inventarios, vars y `artifacts/` cuando aplica).
+Each lab is **self-contained** (its own `ansible.cfg`, inventories, vars and `artifacts/` where applicable).
 
 ### Lab 2 — Inter-VLAN Routing (`lab2-inter-vlan/`)
 
-Pipeline Ansible puro. `playbooks/lab2_full_change.yml` importa las fases `render → precheck → deploy → postcheck` y luego invoca los scripts Nornir/Genie de `shared/scripts/`.
+Pure Ansible pipeline. `playbooks/lab2_full_change.yml` imports the phases `render → precheck → deploy → postcheck` and then invokes the Nornir/Genie scripts from `shared/scripts/`.
 
 - Intent: `intent/lab2_intent.yml` (VLANs 10/20/30/40, switches SW_DMZ, DSW1, ASW1, ASW2).
-- Plantillas Jinja2 en `templates/`.
+- Jinja2 templates in `templates/`.
 
 ### Lab 3 — Router-on-a-Stick (`lab3-router-on-a-stick/`)
 
-Mismo flujo que Lab 2 pero orquestado con **scripts Python**: `scripts/lab3_full_change.py` ejecuta `render → precheck → deploy (Netmiko) → postcheck → nornir → genie`.
+Same flow as Lab 2 but orchestrated with **Python scripts**: `scripts/lab3_full_change.py` runs `render → precheck → deploy (Netmiko) → postcheck → nornir → genie`.
 
-- Dispositivos: R1 (router), SW_DMZ, ASW1, ASW2.
-- Nota: los scripts tienen credenciales de laboratorio hardcodeadas (`netdevops`/`cisco`); es una excepción histórica, no un patrón a replicar.
+- Devices: R1 (router), SW_DMZ, ASW1, ASW2.
+- Note: the scripts have hardcoded lab credentials (`netdevops`/`cisco`); this is a known historical exception, not a pattern to replicate.
 
 ### Lab 4 — OSPF Single-Area (`lab4-ospf-ansible-pipeline/`)
 
-Orquestado 100 % por Ansible con playbooks numerados `00_`–`07_`; `playbooks/lab4_pipeline.yml` los importa en orden.
+Orchestrated 100% by Ansible with numbered playbooks `00_`–`07_`; `playbooks/lab4_pipeline.yml` imports them in order.
 
-- Source of truth: `intent/lab4_source_of_truth.yml`; inventario dinámico desde NetBox (`host_vars/` y `group_vars/` locales).
-- Topología: R1–R4 (OSPF área 0, enlaces /30 `10.0.x.x`), SW_DMZ, ASW1, PC1 (LAN `10.10.30.0/24`). Ver `lab4-ospf-ansible-pipeline/README.md` para el direccionamiento completo.
-- **Regla del lab**: solo la configuración de gestión se hace manual por CLI; todo lo demás lo aplica Ansible.
+- Source of truth: `intent/lab4_source_of_truth.yml`; dynamic inventory from NetBox (local `host_vars/` and `group_vars/`).
+- Topology: R1–R4 (OSPF area 0, /30 links `10.0.x.x`), SW_DMZ, ASW1, PC1 (LAN `10.10.30.0/24`). See `lab4-ospf-ansible-pipeline/README.md` for the full addressing.
+- **Lab rule**: only the management configuration is done manually via CLI; everything else is applied by Ansible.
 
-### Lab 5 — OSPF Multi-Área + Jenkins (`lab5-ospf-multiarea-jenkins-pipeline/`)
+### Lab 5 — OSPF Multi-Area + Jenkins (`lab5-ospf-multiarea-jenkins-pipeline/`)
 
-OSPF multi-área sobre CSR1000v con roles Ansible (`lab5_render`, `lab5_batfish`, `lab5_precheck`, `lab5_ospf`, `lab5_postcheck`, `lab5_nornir`, `lab5_pyats`, `lab5_validate`, `lab5_cleanup`). `playbooks/lab5_pipeline.yml` importa los playbooks `01_`–`08_`.
+Multi-area OSPF on CSR1000v with Ansible roles (`lab5_render`, `lab5_batfish`, `lab5_precheck`, `lab5_ospf`, `lab5_postcheck`, `lab5_nornir`, `lab5_pyats`, `lab5_validate`, `lab5_cleanup`). `playbooks/lab5_pipeline.yml` imports playbooks `01_`–`08_`.
 
-- Introduce **Batfish** como gate de validación pre-deploy.
-- El `Jenkinsfile` localiza el Job Template de AWX por nombre, lo lanza **solo si `EXECUTE_PIPELINE=true`**, espera el resultado y, en caso de fallo, lanza un rollback automático (template ID 16).
-- Credenciales en `group_vars/vault.yml` (Ansible Vault).
+- Introduces **Batfish** as a pre-deploy validation gate.
+- The `Jenkinsfile` locates the AWX Job Template by name, launches it **only if `EXECUTE_PIPELINE=true`**, waits for the result and, on failure, triggers an automatic rollback (template ID 16).
+- Credentials in `group_vars/vault.yml` (Ansible Vault).
 
 ### Lab 6 — EIGRP + CI/CD + APIs (`lab6-eigrp-cicd-pipeline/`)
 
-Topología declarativa en `vars/topology.yml` (6 CSR1000v, LAB6). Enfoque API-first:
+Declarative topology in `vars/topology.yml` (6 CSR1000v, LAB6). API-first approach:
 
-- `scripts/sync_netbox.py` — sincroniza la topología de Git hacia NetBox.
-- `validation/validate_netbox_sot.py` — valida NetBox contra Git (solo lectura).
-- `scripts/render_eigrp.py` y `scripts/render_batfish_candidates.py` — render de configs y snapshots para Batfish.
-- Playbooks `01_`–`03_` (backup pre-change, Batfish pre-deploy, precheck) con roles `lab6_*`.
-- Los subdirectorios `batfish/`, `jenkins/`, `netconf/`, `nornir/`, `postman/`, `pyats/`, `restconf/` están reservados para trabajo futuro.
+- `scripts/sync_netbox.py` — syncs the Git topology into NetBox.
+- `validation/validate_netbox_sot.py` — validates NetBox against Git (read-only).
+- `scripts/render_eigrp.py` and `scripts/render_batfish_candidates.py` — config rendering and Batfish snapshots.
+- Playbooks `01_`–`03_` (pre-change backup, Batfish pre-deploy, precheck) with `lab6_*` roles.
+- The `batfish/`, `jenkins/`, `netconf/`, `nornir/`, `postman/`, `pyats/`, `restconf/` subdirectories are reserved for future work.
 
-## Requisitos previos
+## Prerequisites
 
-- Python del entorno de automatización: `/opt/automation/venv/bin/python`.
-- Ansible con las colecciones de `collections/requirements.yml`:
+- Automation environment Python: `/opt/automation/venv/bin/python`.
+- Ansible with the collections from `collections/requirements.yml`:
   ```bash
   ansible-galaxy collection install -r collections/requirements.yml
   ```
-- Acceso a NetBox, AWX y a la red de gestión `172.30.30.0/26`.
+- Access to NetBox, AWX and the management network `172.30.30.0/26`.
 
-### Variables de entorno
+### Environment variables
 
-| Variable | Uso |
-|----------|-----|
-| `NETBOX_TOKEN` | **Obligatorio** para scripts de API de NetBox (`bootstrap_*`, `sync_netbox.py`, `validate_netbox_sot.py`) |
-| `NETBOX_URL` | Opcional (default `http://192.168.1.16:8000`) |
-| `IOS_PASSWORD` | Password SSH de dispositivos IOS en el inventario raíz y Lab 4 |
-| `awx-api-token` | Credencial de Jenkins con el token de API de AWX (Lab 5) |
+| Variable | Usage |
+|----------|-------|
+| `NETBOX_TOKEN` | **Required** for NetBox API scripts (`bootstrap_*`, `sync_netbox.py`, `validate_netbox_sot.py`) |
+| `NETBOX_URL` | Optional (default `http://192.168.1.16:8000`) |
+| `IOS_PASSWORD` | SSH password for IOS devices in the root inventory and Lab 4 |
+| `awx-api-token` | Jenkins credential holding the AWX API token (Lab 5) |
 
 ### Ansible Vault
 
-`lab5*/group_vars/vault.yml` y `lab6*/group_vars/vault.yml` están cifrados y definen `vault_ios_username`, `vault_ios_password`, `vault_ios_enable_password`. Ejecutar con `--ask-vault-pass` o un archivo de password de vault.
+`lab5*/group_vars/vault.yml` and `lab6*/group_vars/vault.yml` are encrypted and define `vault_ios_username`, `vault_ios_password`, `vault_ios_enable_password`. Run with `--ask-vault-pass` or a vault password file.
 
-## Comandos principales
+## Main commands
 
-Desde la raíz del repositorio, salvo indicación contraria:
+From the repository root, unless otherwise noted:
 
 ```bash
-# Verificar inventario dinámico NetBox
+# Verify the NetBox dynamic inventory
 ansible-inventory --graph
 
-# Reachability de los hosts del inventario
+# Reachability of inventory hosts
 ansible all -m ansible.builtin.command -a 'ping -c 2 {{ ansible_host }}' -c local
 
-# Smoke test AWX
+# AWX smoke test
 ansible-playbook playbooks/awx/show_version.yml
 
-# Lab 2 (pipeline Ansible completo)
+# Lab 2 (full Ansible pipeline)
 ansible-playbook lab2-inter-vlan/playbooks/lab2_full_change.yml
 
-# Lab 3 (pipeline Python completo)
+# Lab 3 (full Python pipeline)
 python3 lab3-router-on-a-stick/scripts/lab3_full_change.py
 
-# Lab 4 (usa su ansible.cfg local)
+# Lab 4 (uses its local ansible.cfg)
 cd lab4-ospf-ansible-pipeline && ansible-playbook playbooks/lab4_pipeline.yml
 
-# Lab 5 (requiere vault password)
+# Lab 5 (requires vault password)
 cd lab5-ospf-multiarea-jenkins-pipeline && ansible-playbook playbooks/lab5_pipeline.yml --ask-vault-pass
 
 # Lab 6
 cd lab6-eigrp-cicd-pipeline
 export NETBOX_TOKEN=<token>
-python3 scripts/sync_netbox.py                  # sincronizar NetBox
-python3 validation/validate_netbox_sot.py       # validar NetBox vs Git
-python3 scripts/render_eigrp.py                 # renderizar configs a configs/
+python3 scripts/sync_netbox.py                  # sync NetBox
+python3 validation/validate_netbox_sot.py       # validate NetBox vs Git
+python3 scripts/render_eigrp.py                 # render configs to configs/
 ansible-playbook playbooks/01_backup_prechange.yml --ask-vault-pass
 
-# Construir Execution Environments (ejemplo)
+# Build Execution Environments (example)
 cd execution-environments/lab5-csr1000v && podman build -t ee-lab5-csr1000v .
 ```
 
-## Convención de `artifacts/`
+## `artifacts/` convention
 
-Cada lab guarda evidencia en `artifacts/`:
+Each lab stores evidence in `artifacts/`:
 
-- `rendered/` — configuraciones renderizadas (versionadas en Git).
-- `precheck/`, `postcheck/`, `deploy/` — evidencia de cada fase.
-- `nornir/` — salidas `show` recolectadas con Nornir.
-- `genie/` / `pyats/` — reportes JSON de validación.
-- `batfish/` — resultados de validación pre-deploy.
-- `backups/` — backups pre-change (algunos ignorados en `.gitignore` por su tamaño).
+- `rendered/` — rendered configurations (versioned in Git).
+- `precheck/`, `postcheck/`, `deploy/` — evidence from each phase.
+- `nornir/` — `show` outputs collected with Nornir.
+- `genie/` / `pyats/` — JSON validation reports.
+- `batfish/` — pre-deploy validation results.
+- `backups/` — pre-change backups (some ignored in `.gitignore` due to size).
 
-Los `.gitkeep` mantienen los directorios vacíos bajo control de versiones.
+`.gitkeep` files keep empty directories under version control.
 
-## Validación y testing
+## Validation and testing
 
-No hay framework de tests tradicional (pytest, CI unitario): la validación es propia del dominio de redes y actúa como **gate del pipeline** — cada fase aborta el flujo si falla.
+There is no traditional test framework (pytest, unit-test CI): validation is domain-specific and acts as a **pipeline gate** — each phase aborts the flow if it fails.
 
-- **Batfish** (validación offline pre-deploy): labs 5 y 6, salida en `artifacts/batfish/output/`.
-- **pyATS / Genie**: parsean los `show` recolectados por Nornir y generan reportes JSON; exit code ≠ 0 si hay FAIL.
-- **Validación de SoT**: `lab6*/validation/validate_netbox_sot.py` compara NetBox contra `vars/topology.yml` (solo lectura).
-- Al modificar un pipeline: como mínimo `ansible-playbook --syntax-check` del playbook afectado y, si es posible, un run de render/precheck sin deploy.
+- **Batfish** (offline pre-deploy validation): labs 5 and 6, output in `artifacts/batfish/output/`.
+- **pyATS / Genie**: parse the `show` outputs collected by Nornir and generate JSON reports; exit code ≠ 0 on any FAIL.
+- **SoT validation**: `lab6*/validation/validate_netbox_sot.py` compares NetBox against `vars/topology.yml` (read-only).
+- When modifying a pipeline: at minimum run `ansible-playbook --syntax-check` on the affected playbook and, if possible, a render/precheck run without deploy.
 
-## Convenciones de código
+## Code conventions
 
-- **Idioma**: mezcla de español e inglés. Documentación, `Jenkinsfile` y scripts recientes (labs 5 y 6) en **español**; labs 2 y 3 en inglés. Mantener el idioma del archivo que se edita.
-- **Playbooks numerados** por fase (`00_cleanup`, `01_render`, `02_precheck`, ...) más un `*_pipeline.yml` que solo hace `import_playbook` en orden.
-- **Roles Ansible** con prefijo del lab (`lab5_*`, `lab6_*`), con `defaults/`, `tasks/`, `vars/` y `files/` para scripts Python.
-- Deploy siempre desde archivo renderizado: `cisco.ios.ios_config` con `src: .../artifacts/rendered/{{ inventory_hostname }}.cfg` y `save_when`.
-- Toda evidencia se guarda con `delegate_to: localhost`.
-- Scripts Python: `#!/usr/bin/env python3`, rutas relativas con `Path(__file__).resolve().parent`, salida con prefijos `[OK]` / `[FAIL]` / `[PASS]` y `sys.exit(1)` ante error.
+- **Language**: mix of Spanish and English. Documentation, `Jenkinsfile` and recent scripts (labs 5 and 6) in **Spanish**; labs 2 and 3 in English. Keep the language of the file being edited.
+- **Playbooks numbered** by phase (`00_cleanup`, `01_render`, `02_precheck`, ...) plus a `*_pipeline.yml` that only does `import_playbook` in order.
+- **Ansible roles** prefixed with the lab name (`lab5_*`, `lab6_*`), with `defaults/`, `tasks/`, `vars/` and `files/` for Python scripts.
+- Deployment always from a rendered file: `cisco.ios.ios_config` with `src: .../artifacts/rendered/{{ inventory_hostname }}.cfg` and `save_when`.
+- All evidence is saved with `delegate_to: localhost`.
+- Python scripts: `#!/usr/bin/env python3`, paths relative with `Path(__file__).resolve().parent`, console output with `[OK]` / `[FAIL]` / `[PASS]` prefixes and `sys.exit(1)` on error.
 
-## Consideraciones de seguridad
+## Security considerations
 
-- **Nunca** commitear credenciales en claro: usar Ansible Vault o variables de entorno (`NETBOX_TOKEN`, `IOS_PASSWORD`).
-- Las conexiones usan `ansible.netcommon.network_cli` con **libssh** y algoritmos legacy (`ssh-rsa`, `diffie-hellman-group-exchange-sha1`, ...) porque los IOSv del laboratorio son antiguos; `host_key_checking = False` es requisito del entorno de laboratorio, **no** una recomendación general.
-- Los scripts de NetBox deshabilitan la verificación TLS (`verify=False`) porque el NetBox del lab usa HTTP/certificado autofirmado; deliberado y solo válido para el laboratorio.
-- El `Jenkinsfile` de Lab 5 tiene modo seguro: sin `EXECUTE_PIPELINE=true` solo valida que el Job Template existe, sin lanzarlo.
+- **Never** commit plaintext credentials: use Ansible Vault or environment variables (`NETBOX_TOKEN`, `IOS_PASSWORD`).
+- Connections use `ansible.netcommon.network_cli` with **libssh** and legacy algorithms (`ssh-rsa`, `diffie-hellman-group-exchange-sha1`, ...) because the lab IOSv devices are old; `host_key_checking = False` is a lab environment requirement, **not** a general recommendation.
+- NetBox scripts disable TLS verification (`verify=False`) because the lab NetBox uses HTTP/self-signed certificates; deliberate and only valid for the lab.
+- The Lab 5 `Jenkinsfile` has a safe mode: without `EXECUTE_PIPELINE=true` it only validates that the Job Template exists, without launching it.
 
-## Documentación adicional
+## Additional documentation
 
-- `AGENTS.md` — guía detallada para agentes de IA (estructura, comandos, convenciones).
-- `lab4-ospf-ansible-pipeline/README.md` — direccionamiento y topología completos del Lab 4.
-- `docs/lab4/` — documentación de fases (p. ej. inventario dinámico NetBox).
+- `AGENTS.md` — detailed guide for AI agents (structure, commands, conventions).
+- `lab4-ospf-ansible-pipeline/README.md` — full Lab 4 addressing and topology.
+- `docs/lab4/` — phase documentation (e.g. NetBox dynamic inventory).
