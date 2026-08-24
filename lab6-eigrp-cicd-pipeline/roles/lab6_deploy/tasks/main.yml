@@ -1,0 +1,146 @@
+---
+- name: Cargar Source of Truth del Lab 6
+  ansible.builtin.set_fact:
+    lab6_topology: >-
+      {{
+        lookup(
+          'ansible.builtin.file',
+          lab6_topology_file
+        ) | from_yaml
+      }}
+
+- name: Validar que el dispositivo existe en topology.yml
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in lab6_topology.devices
+    fail_msg: >-
+      {{ inventory_hostname }} no existe en topology.yml.
+    success_msg: >-
+      {{ inventory_hostname }} encontrado en Source of Truth.
+
+- name: Obtener datos del router
+  ansible.builtin.set_fact:
+    lab6_router_data: >-
+      {{ lab6_topology.devices[inventory_hostname] }}
+
+- name: Construir lista de interfaces de servicio
+  ansible.builtin.set_fact:
+    lab6_service_interfaces: >-
+      {{
+        lab6_router_data.interfaces
+        | dict2items
+        | rejectattr('value.type', 'equalto', 'management')
+        | list
+      }}
+
+- name: Validar proteccion de interfaz management
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_management_interface not in
+        (lab6_service_interfaces | map(attribute='key') | list)
+    fail_msg: >-
+      ERROR: {{ lab6_management_interface }} aparece dentro
+      de las interfaces que seran modificadas.
+    success_msg: >-
+      {{ lab6_management_interface }} protegida.
+      No sera modificada por el deploy.
+
+- name: Verificar backup disponible para rollback
+  ansible.builtin.stat:
+    path: >-
+      {{ playbook_dir }}/../artifacts/backups/pre_change/{{ inventory_hostname }}.cfg
+  delegate_to: localhost
+  register: lab6_rollback_backup
+
+- name: Validar backup antes del deploy
+  ansible.builtin.assert:
+    that:
+      - lab6_rollback_backup.stat.exists
+      - lab6_rollback_backup.stat.isreg
+      - lab6_rollback_backup.stat.size > 0
+    fail_msg: >-
+      No existe backup valido de {{ inventory_hostname }}.
+      El deploy queda bloqueado.
+    success_msg: >-
+      Backup de {{ inventory_hostname }} disponible para rollback.
+
+- name: Deploy Lab 6
+  block:
+
+    - name: Configurar interfaces de servicio
+      cisco.ios.ios_config:
+        parents:
+          - "interface {{ item.key }}"
+        lines:
+          - >-
+            description LAB6 {{ item.value.type | upper }}
+          - >-
+            ip address
+            {{ item.value.ip | ansible.utils.ipaddr('address') }}
+            {{ item.value.ip | ansible.utils.ipaddr('netmask') }}
+          - no shutdown
+      loop: "{{ lab6_service_interfaces }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Configurar redes EIGRP
+      cisco.ios.ios_config:
+        parents:
+          - "router eigrp {{ lab6_eigrp_process_name }}"
+          - >-
+            address-family ipv4 unicast
+            autonomous-system {{ lab6_eigrp_as }}
+        lines:
+          - >-
+            network
+            {{ (item.value.ip | ansible.utils.ipaddr('network')).split('/')[0] }}
+            {{ item.value.ip | ansible.utils.ipaddr('hostmask') }}
+      loop: "{{ lab6_service_interfaces }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Configurar passive-interface por defecto
+      cisco.ios.ios_config:
+        parents:
+          - "router eigrp {{ lab6_eigrp_process_name }}"
+          - >-
+            address-family ipv4 unicast
+            autonomous-system {{ lab6_eigrp_as }}
+          - af-interface default
+        lines:
+          - passive-interface
+
+    - name: Habilitar EIGRP en interfaces P2P
+      cisco.ios.ios_config:
+        parents:
+          - "router eigrp {{ lab6_eigrp_process_name }}"
+          - >-
+            address-family ipv4 unicast
+            autonomous-system {{ lab6_eigrp_as }}
+          - "af-interface {{ item.key }}"
+        lines:
+          - no passive-interface
+      loop: >-
+        {{
+          lab6_service_interfaces
+          | selectattr('value.type', 'equalto', 'p2p')
+          | list
+        }}
+      loop_control:
+        label: "{{ item.key }}"
+
+  rescue:
+
+    - name: Ejecutar rollback inmediato del dispositivo
+      cisco.ios.ios_config:
+        src: >-
+          {{ playbook_dir }}/../artifacts/backups/pre_change/{{ inventory_hostname }}.cfg
+        replace: config
+      when: lab6_rollback_on_failure | bool
+
+    - name: Marcar deploy como fallido despues del rollback
+      ansible.builtin.fail:
+        msg: >-
+          Fallo el deploy en {{ inventory_hostname }}.
+          Se ejecuto rollback utilizando el backup pre-change.
