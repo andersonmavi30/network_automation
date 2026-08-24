@@ -1,0 +1,7 @@
+---
+lab6_topology_file: "{{ playbook_dir }}/../vars/topology.yml"
+
+lab6_eigrp_process_name: "LAB6"
+lab6_eigrp_as: 100
+
+lab6_rollback_on_failure: true

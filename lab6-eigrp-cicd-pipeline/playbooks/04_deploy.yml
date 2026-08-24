@@ -1,0 +1,12 @@
+---
+- name: Lab 6 - Backup pre-change y deploy interfaces EIGRP
+  hosts: all
+  gather_facts: false
+
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
+
+  roles:
+    - role: lab6_backup
+    - role: lab6_deploy
