@@ -1,6 +1,6 @@
 # Network Automation (NetDevOps Labs)
 
-> 🌐 [English version](README.md)
+🇺🇸 [English](README.md)
 
 Repositorio de **automatización de redes estilo Infrastructure as Code** sobre dispositivos Cisco (IOSv, CSR1000v) en un entorno de laboratorio (PNETLab). Está organizado como una serie de laboratorios progresivos (**Lab 2 a Lab 6**) que construyen, cada uno, un pipeline completo de configuración y validación de red.
 
