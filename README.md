@@ -186,6 +186,10 @@ There is no traditional test framework (pytest, unit-test CI): validation is dom
 - NetBox scripts disable TLS verification (`verify=False`) because the lab NetBox uses HTTP/self-signed certificates; deliberate and only valid for the lab.
 - The Lab 5 `Jenkinsfile` has a safe mode: without `EXECUTE_PIPELINE=true` it only validates that the Job Template exists, without launching it.
 
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
 ## Additional documentation
 
 - `AGENTS.md` — detailed guide for AI agents (structure, commands, conventions).
