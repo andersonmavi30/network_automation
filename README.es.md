@@ -186,6 +186,10 @@ No hay framework de tests tradicional (pytest, CI unitario): la validación es p
 - Los scripts de NetBox deshabilitan la verificación TLS (`verify=False`) porque el NetBox del lab usa HTTP/certificado autofirmado; deliberado y solo válido para el laboratorio.
 - El `Jenkinsfile` de Lab 5 tiene modo seguro: sin `EXECUTE_PIPELINE=true` solo valida que el Job Template existe, sin lanzarlo.
 
+## 📄 Licencia
+
+Este proyecto está licenciado bajo la [Licencia MIT](LICENSE).
+
 ## Documentación adicional
 
 - `AGENTS.md` — guía detallada para agentes de IA (estructura, comandos, convenciones).
