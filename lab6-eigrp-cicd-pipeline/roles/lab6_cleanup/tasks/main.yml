@@ -1,0 +1,41 @@
+---
+- name: Construir lista de interfaces del Lab 6
+  ansible.builtin.set_fact:
+    lab6_cleanup_interfaces: >-
+      {{
+        devices[inventory_hostname].interfaces
+        | dict2items
+        | rejectattr('value.type', 'equalto', 'management')
+        | map(attribute='key')
+        | list
+      }}
+
+- name: Validar proteccion de interfaz management
+  ansible.builtin.assert:
+    that:
+      - lab6_management_interface not in lab6_cleanup_interfaces
+    fail_msg: >-
+      ERROR: {{ lab6_management_interface }} aparece dentro
+      de las interfaces que seran limpiadas.
+    success_msg: >-
+      {{ lab6_management_interface }} esta protegida
+      y no sera modificada por el rollback.
+
+- name: Eliminar proceso EIGRP del Lab 6
+  cisco.ios.ios_config:
+    lines:
+      - "no router eigrp LAB6"
+
+- name: Limpiar interfaces del Lab 6
+  cisco.ios.ios_config:
+    parents:
+      - "interface {{ item }}"
+    lines:
+      - no description
+      - no ip address
+      - shutdown
+  loop: "{{ lab6_cleanup_interfaces }}"
+
+- name: Guardar configuracion despues del rollback
+  cisco.ios.ios_config:
+    save_when: modified
