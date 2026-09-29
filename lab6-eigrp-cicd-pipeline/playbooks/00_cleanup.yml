@@ -1,0 +1,12 @@
+---
+- name: Lab 6 - Cleanup / Rollback
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
+    - ../vars/topology.yml
+
+  roles:
+    - role: lab6_cleanup
