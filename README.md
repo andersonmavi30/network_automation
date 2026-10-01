@@ -13,6 +13,7 @@ This is not an application or an installable package: it is a collection of pipe
 5. **Deploy** — with Ansible (`cisco.ios.ios_config`, `network_cli` connection + libssh) or Netmiko (lab 3).
 6. **Postcheck** and evidence collection with **Nornir**.
 7. **Validation** with **pyATS / Genie** and artifact generation in `artifacts/`.
+8. **Rollback / cleanup** — pre-change backups protect deployments and Lab 6 can automatically restore configuration if the deploy fails.
 
 ## Platform components
 
@@ -85,8 +86,11 @@ Declarative topology in `vars/topology.yml` (6 CSR1000v, LAB6). API-first approa
 - `scripts/sync_netbox.py` — syncs the Git topology into NetBox.
 - `validation/validate_netbox_sot.py` — validates NetBox against Git (read-only).
 - `scripts/render_eigrp.py` and `scripts/render_batfish_candidates.py` — config rendering and Batfish snapshots.
-- Playbooks `01_`–`03_` (pre-change backup, Batfish pre-deploy, precheck) with `lab6_*` roles.
-- The `batfish/`, `jenkins/`, `netconf/`, `nornir/`, `postman/`, `pyats/`, `restconf/` subdirectories are reserved for future work.
+- Playbooks `00_`–`04_` currently cover cleanup/rollback, pre-change backup, Batfish pre-deploy validation, precheck and deploy.
+- `04_deploy.yml` runs the backup and deploy roles, validates that a usable pre-change backup exists before modifying the router, protects the management interface, configures service interfaces and EIGRP, and performs an immediate configuration rollback from backup if the deploy block fails and `lab6_rollback_on_failure` is enabled.
+- `00_cleanup.yml` invokes `lab6_cleanup` and can target all routers or a subset through `target_hosts`; it removes the Lab 6 EIGRP process, cleans only non-management interfaces and saves the resulting configuration.
+- Implemented roles: `lab6_backup`, `lab6_batfish`, `lab6_precheck`, `lab6_deploy` and `lab6_cleanup`.
+- Current Lab 6 artifacts are organized under `artifacts/backups/`, `artifacts/batfish/` and `artifacts/precheck/`.
 
 ## Prerequisites
 
@@ -143,6 +147,15 @@ python3 scripts/sync_netbox.py                  # sync NetBox
 python3 validation/validate_netbox_sot.py       # validate NetBox vs Git
 python3 scripts/render_eigrp.py                 # render configs to configs/
 ansible-playbook playbooks/01_backup_prechange.yml --ask-vault-pass
+ansible-playbook playbooks/02_batfish_predeploy.yml --ask-vault-pass
+ansible-playbook playbooks/03_precheck.yml --ask-vault-pass
+ansible-playbook playbooks/04_deploy.yml --ask-vault-pass
+
+# Lab 6 cleanup / rollback (all routers by default)
+ansible-playbook playbooks/00_cleanup.yml --ask-vault-pass
+
+# Example: cleanup only selected routers
+ansible-playbook playbooks/00_cleanup.yml --ask-vault-pass -e 'target_hosts=R1:R2'
 
 # Build Execution Environments (example)
 cd execution-environments/lab5-csr1000v && podman build -t ee-lab5-csr1000v .
