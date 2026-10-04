@@ -1,0 +1,75 @@
+---
+- name: Cargar topologia del Lab 6
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/topology.yml"
+    name: lab6_topology
+
+- name: Validar dispositivo en topology.yml
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in lab6_topology.devices
+    fail_msg: >-
+      {{ inventory_hostname }} no esta definido en topology.yml.
+
+- name: Calcular cantidad esperada de vecinos EIGRP
+  ansible.builtin.set_fact:
+    lab6_expected_neighbor_count: >-
+      {{
+        lab6_topology.devices[inventory_hostname].interfaces
+        | dict2items
+        | selectattr('value.type', 'equalto', 'p2p')
+        | list
+        | length
+      }}
+
+- name: Esperar convergencia de vecinos EIGRP
+  cisco.ios.ios_command:
+    commands:
+      - show ip eigrp neighbors | include ^[0-9]
+  register: lab6_eigrp_neighbors
+  changed_when: false
+  retries: 18
+  delay: 5
+  until: >-
+    (
+      lab6_eigrp_neighbors.stdout_lines[0]
+      | length
+    ) == (lab6_expected_neighbor_count | int)
+
+- name: Esperar aprendizaje de rutas EIGRP
+  cisco.ios.ios_command:
+    commands:
+      - show ip route eigrp | include ^D
+  register: lab6_eigrp_routes
+  changed_when: false
+  retries: 18
+  delay: 5
+  until: >-
+    lab6_eigrp_routes.stdout_lines[0]
+    | length > 0
+
+- name: Crear directorio de artifacts de convergencia
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/convergence"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+
+- name: Guardar evidencia de convergencia
+  ansible.builtin.copy:
+    dest: >-
+      {{ playbook_dir }}/../artifacts/convergence/{{ inventory_hostname }}.json
+    mode: "0644"
+    content: |
+      {{
+        {
+          "device": inventory_hostname,
+          "expected_neighbors": lab6_expected_neighbor_count | int,
+          "observed_neighbors": lab6_eigrp_neighbors.stdout_lines[0] | length,
+          "neighbors": lab6_eigrp_neighbors.stdout_lines[0],
+          "eigrp_routes": lab6_eigrp_routes.stdout_lines[0],
+          "validation": "PASS"
+        } | to_nice_json
+      }}
+  delegate_to: localhost
