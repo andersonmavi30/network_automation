@@ -1,0 +1,184 @@
+---
+- name: Cargar topologia del Lab 6
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/topology.yml"
+    name: lab6_topology
+
+- name: Validar dispositivo en topology.yml
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in lab6_topology.devices
+    fail_msg: >-
+      {{ inventory_hostname }} no esta definido en topology.yml.
+
+- name: Construir lista de interfaces de servicio
+  ansible.builtin.set_fact:
+    lab6_service_interfaces: >-
+      {{
+        lab6_topology.devices[inventory_hostname].interfaces
+        | dict2items
+        | rejectattr('value.type', 'equalto', 'management')
+        | list
+      }}
+
+- name: Calcular vecinos EIGRP esperados
+  ansible.builtin.set_fact:
+    lab6_expected_neighbor_count: >-
+      {{
+        lab6_service_interfaces
+        | selectattr('value.type', 'equalto', 'p2p')
+        | list
+        | length
+      }}
+
+- name: Inicializar lista de LAN remotas
+  ansible.builtin.set_fact:
+    lab6_remote_lan_targets: []
+
+- name: Construir lista de gateways LAN remotos
+  ansible.builtin.set_fact:
+    lab6_remote_lan_targets: >-
+      {{
+        lab6_remote_lan_targets
+        +
+        [
+          (
+            item.value.interfaces
+            | dict2items
+            | selectattr('value.type', 'equalto', 'lan')
+            | map(attribute='value.ip')
+            | first
+          ).split('/')[0]
+        ]
+      }}
+  loop: "{{ lab6_topology.devices | dict2items }}"
+  when:
+    - item.key != inventory_hostname
+
+- name: Validar estado de interfaces de servicio
+  cisco.ios.ios_command:
+    commands:
+      - "show ip interface brief | include ^{{ item.key }}"
+  loop: "{{ lab6_service_interfaces }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: lab6_interface_results
+  changed_when: false
+
+- name: Confirmar interfaces de servicio UP UP
+  ansible.builtin.assert:
+    that:
+      - item.stdout[0] is regex('.*up\\s+up$')
+    fail_msg: >-
+      La interfaz {{ item.item.key }} de {{ inventory_hostname }}
+      no esta UP/UP.
+    success_msg: >-
+      La interfaz {{ item.item.key }} de {{ inventory_hostname }}
+      esta UP/UP.
+  loop: "{{ lab6_interface_results.results }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+
+- name: Recolectar estado EIGRP y tabla de routing
+  cisco.ios.ios_command:
+    commands:
+      - show running-config | section ^router eigrp
+      - show ip eigrp neighbors | include ^[0-9]
+      - show ip route eigrp | include ^D
+  register: lab6_postcheck_routing
+  changed_when: false
+
+- name: Calcular vecinos observados
+  ansible.builtin.set_fact:
+    lab6_observed_neighbor_count: >-
+      {{
+        lab6_postcheck_routing.stdout_lines[1]
+        | length
+      }}
+
+- name: Validar proceso EIGRP
+  ansible.builtin.assert:
+    that:
+      - "'router eigrp LAB6' in lab6_postcheck_routing.stdout[0]"
+      - "'autonomous-system 100' in lab6_postcheck_routing.stdout[0]"
+    fail_msg: >-
+      EIGRP LAB6 AS 100 no esta correctamente configurado
+      en {{ inventory_hostname }}.
+    success_msg: >-
+      EIGRP LAB6 AS 100 esta configurado correctamente
+      en {{ inventory_hostname }}.
+
+- name: Validar cantidad de vecinos EIGRP
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_observed_neighbor_count | int
+        ==
+        lab6_expected_neighbor_count | int
+    fail_msg: >-
+      {{ inventory_hostname }} tiene
+      {{ lab6_observed_neighbor_count }} vecinos EIGRP,
+      pero se esperaban {{ lab6_expected_neighbor_count }}.
+    success_msg: >-
+      {{ inventory_hostname }} tiene todos sus
+      {{ lab6_expected_neighbor_count }} vecinos EIGRP.
+
+- name: Validar existencia de rutas EIGRP
+  ansible.builtin.assert:
+    that:
+      - lab6_postcheck_routing.stdout_lines[2] | length > 0
+    fail_msg: >-
+      {{ inventory_hostname }} no tiene rutas aprendidas por EIGRP.
+    success_msg: >-
+      {{ inventory_hostname }} tiene rutas aprendidas por EIGRP.
+
+- name: Validar reachability hacia gateways LAN remotos
+  cisco.ios.ios_command:
+    commands:
+      - "ping {{ item }} repeat 3 timeout 1"
+  loop: "{{ lab6_remote_lan_targets }}"
+  register: lab6_ping_results
+  changed_when: false
+
+- name: Confirmar reachability hacia LAN remotas
+  ansible.builtin.assert:
+    that:
+      - "'Success rate is 100 percent' in item.stdout[0]"
+    fail_msg: >-
+      {{ inventory_hostname }} no tiene reachability completa
+      hacia {{ item.item }}.
+    success_msg: >-
+      {{ inventory_hostname }} alcanza correctamente
+      {{ item.item }}.
+  loop: "{{ lab6_ping_results.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Crear directorio de artifacts de postcheck
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/postcheck"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+
+- name: Guardar evidencia del postcheck
+  ansible.builtin.copy:
+    dest: >-
+      {{ playbook_dir }}/../artifacts/postcheck/{{ inventory_hostname }}.json
+    mode: "0644"
+    content: |
+      {{
+        {
+          "device": inventory_hostname,
+          "expected_neighbors": lab6_expected_neighbor_count | int,
+          "observed_neighbors": lab6_observed_neighbor_count | int,
+          "eigrp_routes": lab6_postcheck_routing.stdout_lines[2],
+          "remote_lan_targets": lab6_remote_lan_targets,
+          "interface_validation": "PASS",
+          "eigrp_validation": "PASS",
+          "reachability_validation": "PASS",
+          "validation": "PASS"
+        } | to_nice_json
+      }}
+  delegate_to: localhost
