@@ -1,0 +1,51 @@
+---
+- name: Verificar token de NetBox
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'NETBOX_TOKEN') | length > 0
+    fail_msg: >-
+      La variable de entorno NETBOX_TOKEN no esta definida.
+    success_msg: >-
+      NETBOX_TOKEN esta disponible.
+
+- name: Crear directorio de artifacts de Nornir
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/nornir"
+    state: directory
+    mode: "0755"
+
+- name: Ejecutar validacion Nornir del Lab 6
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/lab6_nornir_collect.py"
+      - "--netbox-url"
+      - "http://192.168.1.16:8000"
+      - "--site"
+      - "lab6"
+      - "--topology-file"
+      - "{{ playbook_dir }}/../vars/topology.yml"
+      - "--output-dir"
+      - "{{ playbook_dir }}/../artifacts/nornir"
+  environment:
+    NETBOX_TOKEN: "{{ lookup('env', 'NETBOX_TOKEN') }}"
+    NORNIR_USERNAME: "{{ ansible_user }}"
+    NORNIR_PASSWORD: "{{ ansible_password }}"
+    NORNIR_SECRET: "{{ ansible_become_password }}"
+  register: lab6_nornir_result
+  changed_when: false
+  no_log: true
+
+- name: Leer resumen de validacion Nornir
+  ansible.builtin.slurp:
+    src: "{{ playbook_dir }}/../artifacts/nornir/nornir_summary.json"
+  register: lab6_nornir_summary_file
+
+- name: Mostrar resumen de validacion Nornir
+  ansible.builtin.debug:
+    msg: >-
+      {{
+        lab6_nornir_summary_file.content
+        | b64decode
+        | from_json
+      }}
