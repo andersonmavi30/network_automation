@@ -1,0 +1,93 @@
+---
+- name: Verificar token de NetBox
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'NETBOX_TOKEN') | length > 0
+    fail_msg: >-
+      La variable de entorno NETBOX_TOKEN no esta definida.
+    success_msg: >-
+      NETBOX_TOKEN esta disponible.
+
+- name: Crear directorio de artifacts NETCONF
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../artifacts/netconf"
+    state: directory
+    mode: "0755"
+
+- name: Ejecutar validacion NETCONF YANG del Lab 6
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/lab6_netconf_validate.py"
+      - "--netbox-url"
+      - "http://192.168.1.16:8000"
+      - "--site"
+      - "lab6"
+      - "--topology-file"
+      - "{{ playbook_dir }}/../vars/topology.yml"
+      - "--output-dir"
+      - "{{ playbook_dir }}/../artifacts/netconf"
+  environment:
+    NETBOX_TOKEN: "{{ lookup('env', 'NETBOX_TOKEN') }}"
+    NETCONF_USERNAME: "{{ ansible_user }}"
+    NETCONF_PASSWORD: "{{ ansible_password }}"
+  register: lab6_netconf_result
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Mostrar resultado sanitizado de NETCONF
+  ansible.builtin.debug:
+    msg:
+      return_code: "{{ lab6_netconf_result.rc }}"
+      stdout: "{{ lab6_netconf_result.stdout | default('No stdout output') }}"
+      stderr: "{{ lab6_netconf_result.stderr | default('No stderr output') }}"
+
+- name: Verificar existencia del resumen NETCONF
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../artifacts/netconf/netconf_summary.json"
+  register: lab6_netconf_summary_stat
+
+- name: Leer resumen NETCONF
+  ansible.builtin.slurp:
+    src: "{{ playbook_dir }}/../artifacts/netconf/netconf_summary.json"
+  register: lab6_netconf_summary_file
+  when:
+    - lab6_netconf_summary_stat.stat.exists
+
+- name: Parsear resumen NETCONF
+  ansible.builtin.set_fact:
+    lab6_netconf_summary: >-
+      {{
+        lab6_netconf_summary_file.content
+        | b64decode
+        | from_json
+      }}
+  when:
+    - lab6_netconf_summary_stat.stat.exists
+
+- name: Mostrar resumen NETCONF
+  ansible.builtin.debug:
+    var: lab6_netconf_summary
+  when:
+    - lab6_netconf_summary_stat.stat.exists
+
+- name: Validar resultado final NETCONF
+  ansible.builtin.assert:
+    that:
+      - lab6_netconf_result.rc == 0
+      - lab6_netconf_summary_stat.stat.exists
+      - >-
+        (lab6_netconf_summary | default({}))
+        .get('validation_passed', false) | bool
+    fail_msg: >-
+      Lab 6 NETCONF validation failed.
+      Return code: {{ lab6_netconf_result.rc }}.
+      Failed devices:
+      {{
+        (lab6_netconf_summary | default({}))
+        .get('failed_devices', ['Summary unavailable'])
+        | join(', ')
+      }}.
+    success_msg: >-
+      Lab 6 NETCONF YANG validation passed successfully.
