@@ -1,0 +1,423 @@
+{
+  "info": {
+    "_postman_id": "lab6-restconf-collection",
+    "name": "Lab6 - RESTCONF YANG",
+    "description": "RESTCONF and YANG lab for Cisco IOS XE. Includes read-only queries and a controlled CRUD workflow using Loopback10.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{username}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{password}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Read Only",
+      "item": [
+        {
+          "name": "01 - GET RESTCONF Root",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/",
+            "description": "Checks RESTCONF API reachability."
+          }
+        },
+        {
+          "name": "02 - GET Cisco Native Root",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native",
+            "description": "Retrieves the Cisco IOS XE native YANG configuration tree."
+          }
+        },
+        {
+          "name": "03 - GET Hostname",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/hostname",
+            "description": "Retrieves the hostname."
+          }
+        },
+        {
+          "name": "04 - GET Cisco Native Interfaces",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface",
+            "description": "Retrieves interface configuration from Cisco-IOS-XE-native."
+          }
+        },
+        {
+          "name": "05 - GET Router Configuration",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/router",
+            "description": "Retrieves routing configuration."
+          }
+        },
+        {
+          "name": "06 - GET IETF Interfaces",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/ietf-interfaces:interfaces",
+            "description": "Queries the standard ietf-interfaces YANG model."
+          }
+        },
+        {
+          "name": "07 - GET YANG Library",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/ietf-yang-library:yang-library",
+            "description": "Queries YANG modules supported by the device."
+          }
+        },
+        {
+          "name": "08 - GET RESTCONF Operations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/operations",
+            "description": "Queries RESTCONF RPC operations."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Loopback10 CRUD",
+      "item": [
+        {
+          "name": "09 - GET Precheck Loopback10",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Loopback10 is free or already exists\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Precheck before creating Loopback10. Ideally returns HTTP 404 when the interface does not exist."
+          }
+        },
+        {
+          "name": "10 - POST Create Loopback10",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"POST accepted\", function () {",
+                  "    pm.expect([200, 201, 204]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{content_type_header}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Cisco-IOS-XE-native:Loopback\": [\n    {\n      \"name\": {{loopback_id}},\n      \"description\": \"{{loopback_description_initial}}\",\n      \"ip\": {\n        \"address\": {\n          \"primary\": {\n            \"address\": \"{{loopback_ip_initial}}\",\n            \"mask\": \"{{loopback_netmask}}\"\n          }\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface",
+            "description": "Creates Loopback10 using HTTP POST."
+          }
+        },
+        {
+          "name": "11 - GET Verify POST",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Loopback10 exists\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Validates that POST created Loopback10."
+          }
+        },
+        {
+          "name": "12 - PATCH Loopback10 Description",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"PATCH accepted\", function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{content_type_header}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Cisco-IOS-XE-native:Loopback\": [\n    {\n      \"name\": {{loopback_id}},\n      \"description\": \"{{loopback_description_patch}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Partially modifies Loopback10. The existing IP should remain unchanged."
+          }
+        },
+        {
+          "name": "13 - GET Verify PATCH",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Validates the partial modification performed with PATCH."
+          }
+        },
+        {
+          "name": "14 - PUT Replace Loopback10",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"PUT accepted\", function () {",
+                  "    pm.expect([200, 201, 204]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{content_type_header}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Cisco-IOS-XE-native:Loopback\": [\n    {\n      \"name\": {{loopback_id}},\n      \"description\": \"{{loopback_description_put}}\",\n      \"ip\": {\n        \"address\": {\n          \"primary\": {\n            \"address\": \"{{loopback_ip_put}}\",\n            \"mask\": \"{{loopback_netmask}}\"\n          }\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Replaces the Loopback10 resource using PUT."
+          }
+        },
+        {
+          "name": "15 - GET Verify PUT",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Validates the complete resource after PUT."
+          }
+        },
+        {
+          "name": "16 - DELETE Loopback10",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"DELETE accepted\", function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Deletes Loopback10."
+          }
+        },
+        {
+          "name": "17 - GET Confirm Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Loopback10 was removed\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "{{accept_header}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{protocol}}://{{device_ip}}:{{restconf_port}}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback={{loopback_id}}",
+            "description": "Confirms that Loopback10 no longer exists after DELETE."
+          }
+        }
+      ]
+    }
+  ]
+}
