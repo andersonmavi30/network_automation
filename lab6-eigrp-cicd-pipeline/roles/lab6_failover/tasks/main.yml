@@ -1,0 +1,107 @@
+---
+- name: Cargar variables de la prueba de failover
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/failover.yml"
+
+- name: Validar dispositivo objetivo de la prueba
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname == failover_test.target_device
+      - failover_test.target_interface != failover_test.protected_interface
+      - failover_test.failure_action == "shutdown"
+    fail_msg: >-
+      Failover safety validation failed.
+      Target={{ inventory_hostname }},
+      Interface={{ failover_test.target_interface }},
+      Protected={{ failover_test.protected_interface }}.
+    success_msg: >-
+      Failover target validated:
+      {{ inventory_hostname }} {{ failover_test.target_interface }}.
+
+- name: Verificar estado previo de la interfaz objetivo
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ failover_test.target_interface }}
+  register: lab6_failover_interface_before
+  changed_when: false
+
+- name: Verificar vecino EIGRP antes de la falla
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip eigrp neighbors |
+        include {{ failover_test.peer_ip | ansible.utils.ipaddr('address') }}
+  register: lab6_failover_neighbor_before
+  changed_when: false
+
+- name: Confirmar precondiciones antes del shutdown
+  ansible.builtin.assert:
+    that:
+      - >-
+        failover_test.target_interface
+        in lab6_failover_interface_before.stdout[0]
+      - >-
+        (failover_test.peer_ip | ansible.utils.ipaddr('address'))
+        in lab6_failover_neighbor_before.stdout[0]
+    fail_msg: >-
+      The controlled failure cannot start because the target
+      interface or EIGRP adjacency is not in the expected state.
+    success_msg: >-
+      Target interface and EIGRP adjacency are ready
+      for the controlled failure.
+
+- name: Provocar falla controlada del enlace EIGRP
+  cisco.ios.ios_config:
+    parents:
+      - "interface {{ failover_test.target_interface }}"
+    lines:
+      - "{{ failover_test.failure_action }}"
+  register: lab6_failover_change
+
+- name: Esperar propagacion de la falla
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Verificar interfaz objetivo despues de la falla
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ failover_test.target_interface }}
+  register: lab6_failover_interface_after
+  changed_when: false
+
+- name: Verificar perdida del vecino EIGRP
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip eigrp neighbors |
+        include {{ failover_test.peer_ip | ansible.utils.ipaddr('address') }}
+  register: lab6_failover_neighbor_after
+  changed_when: false
+
+- name: Verificar que management permanece operativo
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ failover_test.protected_interface }}
+  register: lab6_failover_management_after
+  changed_when: false
+
+- name: Validar resultado de la falla controlada
+  ansible.builtin.assert:
+    that:
+      - "'administratively down' in lab6_failover_interface_after.stdout[0]"
+      - "lab6_failover_neighbor_after.stdout[0] | trim | length == 0"
+      - >-
+        lab6_failover_management_after.stdout[0]
+        is search('up\\s+up')
+    fail_msg: >-
+      Controlled failover validation failed.
+      Review target interface, EIGRP adjacency and management status.
+    success_msg: >-
+      Controlled EIGRP link failure completed successfully.
+      The R5-R2 adjacency was removed and management remained operational.
