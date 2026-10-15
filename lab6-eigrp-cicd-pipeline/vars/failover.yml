@@ -1,0 +1,23 @@
+---
+failover_test:
+  name: "R5-R2 controlled EIGRP link failure"
+
+  target_device: "R5"
+  target_interface: "GigabitEthernet1"
+  target_ip: "10.0.23.2/30"
+
+  peer_device: "R2"
+  peer_interface: "GigabitEthernet1"
+  peer_ip: "10.0.23.1/30"
+
+  network: "10.0.23.0/30"
+
+  protected_interface: "GigabitEthernet3"
+
+  failure_action: "shutdown"
+  recovery_action: "no shutdown"
+
+  expected:
+    adjacency_lost: true
+    management_reachable: true
+    alternate_path_available: true
