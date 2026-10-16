@@ -1,0 +1,178 @@
+---
+- name: Cargar variables de failover
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/failover.yml"
+
+- name: Definir red remota para validar camino alternativo
+  ansible.builtin.set_fact:
+    lab6_reconvergence_remote_network: "192.168.20.0"
+    lab6_reconvergence_remote_mask: "255.255.255.0"
+    lab6_reconvergence_remote_gateway: "192.168.20.254"
+
+- name: Validar seguridad de la prueba de reconvergencia
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname == failover_test.target_device
+      - failover_test.target_interface != failover_test.protected_interface
+      - failover_test.recovery_action == "no shutdown"
+    fail_msg: >-
+      Reconvergence safety validation failed.
+      Target={{ inventory_hostname }},
+      Interface={{ failover_test.target_interface }},
+      Protected={{ failover_test.protected_interface }}.
+    success_msg: >-
+      Reconvergence target validated:
+      {{ inventory_hostname }} {{ failover_test.target_interface }}.
+
+- name: Verificar que la interfaz permanece caída por el Punto 17
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ failover_test.target_interface }}
+  register: lab6_reconvergence_interface_failed
+  changed_when: false
+
+- name: Verificar que la adyacencia directa R5-R2 sigue caída
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip eigrp neighbors |
+        include {{ failover_test.peer_ip | ansible.utils.ipaddr('address') }}
+  register: lab6_reconvergence_neighbor_failed
+  changed_when: false
+
+- name: Validar estado inicial de reconvergencia
+  ansible.builtin.assert:
+    that:
+      - >-
+        'administratively down'
+        in lab6_reconvergence_interface_failed.stdout[0]
+      - >-
+        lab6_reconvergence_neighbor_failed.stdout[0]
+        | trim
+        | length == 0
+    fail_msg: >-
+      R5 is not in the expected post-failover state.
+      The Point 17 controlled failure must exist before
+      starting reconvergence validation.
+    success_msg: >-
+      Post-failover state confirmed.
+      R5-R2 direct adjacency is down.
+
+- name: Verificar ruta EIGRP alternativa hacia LAN de R2
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip route
+        {{ lab6_reconvergence_remote_network }}
+        {{ lab6_reconvergence_remote_mask }}
+  register: lab6_reconvergence_alternate_route
+  changed_when: false
+
+- name: Validar existencia de camino EIGRP alternativo
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_reconvergence_alternate_route.stdout[0]
+        is search('Known via "eigrp')
+    fail_msg: >-
+      No EIGRP alternate route was found toward
+      {{ lab6_reconvergence_remote_network }}/24
+      while the direct R5-R2 link is down.
+    success_msg: >-
+      EIGRP alternate path toward the R2 LAN is available.
+
+- name: Validar conectividad por el camino alternativo
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        ping {{ lab6_reconvergence_remote_gateway }}
+        repeat 5
+  register: lab6_reconvergence_ping_alternate
+  changed_when: false
+
+- name: Confirmar conectividad durante la falla
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_reconvergence_ping_alternate.stdout[0]
+        is search('Success rate is 100 percent')
+    fail_msg: >-
+      Connectivity to {{ lab6_reconvergence_remote_gateway }}
+      failed while using the alternate EIGRP path.
+    success_msg: >-
+      Connectivity remains operational through
+      the alternate EIGRP path.
+
+- name: Restaurar enlace R5-R2
+  cisco.ios.ios_config:
+    parents:
+      - "interface {{ failover_test.target_interface }}"
+    lines:
+      - "{{ failover_test.recovery_action }}"
+  register: lab6_reconvergence_restore
+
+- name: Esperar regreso de la adyacencia EIGRP R5-R2
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip eigrp neighbors |
+        include {{ failover_test.peer_ip | ansible.utils.ipaddr('address') }}
+  register: lab6_reconvergence_neighbor_restored
+  retries: 18
+  delay: 5
+  until: >-
+    (failover_test.peer_ip | ansible.utils.ipaddr('address'))
+    in lab6_reconvergence_neighbor_restored.stdout[0]
+  changed_when: false
+
+- name: Verificar estado final de la interfaz restaurada
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ failover_test.target_interface }}
+  register: lab6_reconvergence_interface_restored
+  changed_when: false
+
+- name: Verificar ruta EIGRP despues de restaurar el enlace
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip route
+        {{ lab6_reconvergence_remote_network }}
+        {{ lab6_reconvergence_remote_mask }}
+  register: lab6_reconvergence_route_restored
+  changed_when: false
+
+- name: Verificar conectividad despues de la restauracion
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        ping {{ lab6_reconvergence_remote_gateway }}
+        repeat 5
+  register: lab6_reconvergence_ping_restored
+  changed_when: false
+
+- name: Validar reconvergencia final
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_reconvergence_interface_restored.stdout[0]
+        is search('up\\s+up')
+      - >-
+        (failover_test.peer_ip | ansible.utils.ipaddr('address'))
+        in lab6_reconvergence_neighbor_restored.stdout[0]
+      - >-
+        lab6_reconvergence_route_restored.stdout[0]
+        is search('Known via "eigrp')
+      - >-
+        lab6_reconvergence_ping_restored.stdout[0]
+        is search('Success rate is 100 percent')
+    fail_msg: >-
+      EIGRP reconvergence validation failed after
+      restoring the R5-R2 link.
+    success_msg: >-
+      EIGRP reconvergence completed successfully.
+      R5-R2 adjacency, routing and connectivity were restored.
