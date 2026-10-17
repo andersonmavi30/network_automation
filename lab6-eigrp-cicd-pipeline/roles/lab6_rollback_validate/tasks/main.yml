@@ -1,0 +1,131 @@
+---
+- name: Cargar topologia del Lab 6
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/topology.yml"
+
+- name: Construir lista de interfaces de servicio del Lab 6
+  ansible.builtin.set_fact:
+    lab6_rollback_validate_interfaces: >-
+      {{
+        devices[inventory_hostname].interfaces
+        | dict2items
+        | rejectattr('value.type', 'equalto', 'management')
+        | map(attribute='key')
+        | list
+      }}
+
+- name: Validar proteccion de management
+  ansible.builtin.assert:
+    that:
+      - lab6_management_interface not in lab6_rollback_validate_interfaces
+    fail_msg: >-
+      ERROR: {{ lab6_management_interface }} aparece dentro
+      de las interfaces que serian afectadas por el rollback.
+    success_msg: >-
+      {{ lab6_management_interface }} permanece protegida.
+
+- name: Verificar ausencia del proceso EIGRP LAB6
+  cisco.ios.ios_command:
+    commands:
+      - "show running-config | section ^router eigrp LAB6"
+  register: lab6_rollback_eigrp_state
+  changed_when: false
+
+- name: Validar que EIGRP LAB6 fue eliminado
+  ansible.builtin.assert:
+    that:
+      - lab6_rollback_eigrp_state.stdout[0] | trim | length == 0
+    fail_msg: >-
+      El proceso EIGRP LAB6 todavia existe despues del rollback.
+    success_msg: >-
+      EIGRP LAB6 fue eliminado correctamente.
+
+- name: Verificar estado de interfaces despues del rollback
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ item }}
+  loop: "{{ lab6_rollback_validate_interfaces }}"
+  register: lab6_rollback_interface_state
+  changed_when: false
+
+- name: Validar interfaces limpias y administrativamente apagadas
+  ansible.builtin.assert:
+    that:
+      - "'unassigned' in item.stdout[0]"
+      - "'administratively down' in item.stdout[0]"
+    fail_msg: >-
+      La interfaz {{ item.item }} no quedo en el estado esperado
+      despues del rollback.
+    success_msg: >-
+      La interfaz {{ item.item }} esta limpia y administrativamente down.
+  loop: "{{ lab6_rollback_interface_state.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Verificar interfaz de management
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ lab6_management_interface }}
+  register: lab6_rollback_management_state
+  changed_when: false
+
+- name: Validar que management sigue operativo
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_rollback_management_state.stdout[0]
+        is search('up\\s+up')
+    fail_msg: >-
+      La interfaz de management {{ lab6_management_interface }}
+      no esta up/up despues del rollback.
+    success_msg: >-
+      La interfaz de management {{ lab6_management_interface }}
+      permanece up/up.
+
+- name: Comprobar idempotencia de eliminacion EIGRP
+  cisco.ios.ios_config:
+    lines:
+      - "no router eigrp LAB6"
+  check_mode: true
+  register: lab6_idempotency_eigrp
+
+- name: Comprobar idempotencia de interfaces
+  cisco.ios.ios_config:
+    parents:
+      - "interface {{ item }}"
+    lines:
+      - no description
+      - no ip address
+      - shutdown
+  loop: "{{ lab6_rollback_validate_interfaces }}"
+  check_mode: true
+  register: lab6_idempotency_interfaces
+
+- name: Calcular interfaces que producirian cambios
+  ansible.builtin.set_fact:
+    lab6_idempotency_changed_interfaces: >-
+      {{
+        lab6_idempotency_interfaces.results
+        | selectattr('changed', 'equalto', true)
+        | map(attribute='item')
+        | list
+      }}
+
+- name: Validar idempotencia del rollback
+  ansible.builtin.assert:
+    that:
+      - not lab6_idempotency_eigrp.changed
+      - lab6_idempotency_changed_interfaces | length == 0
+    fail_msg: >-
+      El rollback no es idempotente.
+      EIGRP changed={{ lab6_idempotency_eigrp.changed }}.
+      Interfaces con cambios pendientes={{
+        lab6_idempotency_changed_interfaces | join(', ')
+      }}.
+    success_msg: >-
+      Rollback idempotente validado.
+      Una segunda aplicacion no produciria cambios.
