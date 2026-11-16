@@ -1,0 +1,214 @@
+---
+- name: Cargar topologia del Lab 6
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../vars/topology.yml"
+
+- name: Construir interfaces de servicio
+  ansible.builtin.set_fact:
+    lab6_final_service_interfaces: >-
+      {{
+        devices[inventory_hostname].interfaces
+        | dict2items
+        | rejectattr('value.type', 'equalto', 'management')
+        | list
+      }}
+
+- name: Calcular cantidad esperada de vecinos EIGRP
+  ansible.builtin.set_fact:
+    lab6_final_expected_neighbors: >-
+      {{
+        devices[inventory_hostname].interfaces
+        | dict2items
+        | selectattr('value.type', 'equalto', 'p2p')
+        | list
+        | length
+      }}
+
+- name: Construir lista de gateways LAN remotos
+  ansible.builtin.set_fact:
+    lab6_final_remote_gateways: >-
+      {{
+        devices
+        | dict2items
+        | rejectattr('key', 'equalto', inventory_hostname)
+        | map(attribute='value.interfaces')
+        | map('dict2items')
+        | flatten
+        | selectattr('value.type', 'equalto', 'lan')
+        | map(attribute='value.ip')
+        | map('ansible.utils.ipaddr', 'address')
+        | list
+      }}
+
+- name: Validar proteccion de management
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_management_interface
+        not in
+        (
+          lab6_final_service_interfaces
+          | map(attribute='key')
+          | list
+        )
+    fail_msg: >-
+      ERROR: {{ lab6_management_interface }} aparece como
+      interfaz de servicio.
+    success_msg: >-
+      {{ lab6_management_interface }} permanece protegida.
+
+- name: Obtener hostname del router
+  cisco.ios.ios_command:
+    commands:
+      - show running-config | include ^hostname
+  register: lab6_final_hostname
+  changed_when: false
+
+- name: Validar hostname
+  ansible.builtin.assert:
+    that:
+      - >-
+        ('hostname ' ~ inventory_hostname)
+        in lab6_final_hostname.stdout[0]
+    fail_msg: >-
+      Hostname inesperado en {{ inventory_hostname }}.
+    success_msg: >-
+      Hostname {{ inventory_hostname }} validado.
+
+- name: Obtener estado de management
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ lab6_management_interface }}
+  register: lab6_final_management
+  changed_when: false
+
+- name: Validar interfaz management up up
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_final_management.stdout[0]
+        is search('up\\s+up')
+    fail_msg: >-
+      {{ lab6_management_interface }} no esta up/up
+      en {{ inventory_hostname }}.
+    success_msg: >-
+      Management permanece operativo en {{ inventory_hostname }}.
+
+- name: Obtener estado de interfaces de servicio
+  cisco.ios.ios_command:
+    commands:
+      - >-
+        show ip interface brief |
+        include {{ item.key }}
+  loop: "{{ lab6_final_service_interfaces }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: lab6_final_interfaces
+  changed_when: false
+
+- name: Validar interfaces de servicio up up
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.stdout[0]
+        is search('up\\s+up')
+    fail_msg: >-
+      {{ item.item.key }} no esta up/up
+      en {{ inventory_hostname }}.
+    success_msg: >-
+      {{ item.item.key }} esta up/up.
+  loop: "{{ lab6_final_interfaces.results }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+
+- name: Verificar proceso EIGRP LAB6
+  cisco.ios.ios_command:
+    commands:
+      - show running-config | section ^router eigrp LAB6
+  register: lab6_final_eigrp_config
+  changed_when: false
+
+- name: Validar proceso EIGRP
+  ansible.builtin.assert:
+    that:
+      - "'router eigrp LAB6' in lab6_final_eigrp_config.stdout[0]"
+      - "'autonomous-system 100' in lab6_final_eigrp_config.stdout[0]"
+    fail_msg: >-
+      EIGRP LAB6 AS 100 no esta correctamente configurado
+      en {{ inventory_hostname }}.
+    success_msg: >-
+      EIGRP LAB6 AS 100 validado.
+
+- name: Obtener vecinos EIGRP
+  cisco.ios.ios_command:
+    commands:
+      - show ip eigrp neighbors | include ^[0-9]
+  register: lab6_final_neighbors
+  changed_when: false
+
+- name: Contar vecinos EIGRP
+  ansible.builtin.set_fact:
+    lab6_final_neighbor_count: >-
+      {{
+        lab6_final_neighbors.stdout_lines[0]
+        | length
+      }}
+
+- name: Validar cantidad de vecinos EIGRP
+  ansible.builtin.assert:
+    that:
+      - >-
+        lab6_final_neighbor_count | int
+        ==
+        lab6_final_expected_neighbors | int
+    fail_msg: >-
+      {{ inventory_hostname }} esperaba
+      {{ lab6_final_expected_neighbors }} vecinos EIGRP
+      y encontro {{ lab6_final_neighbor_count }}.
+    success_msg: >-
+      Vecinos EIGRP correctos:
+      {{ lab6_final_neighbor_count }}.
+
+- name: Obtener rutas EIGRP
+  cisco.ios.ios_command:
+    commands:
+      - show ip route eigrp | include ^D
+  register: lab6_final_routes
+  changed_when: false
+
+- name: Validar existencia de rutas EIGRP
+  ansible.builtin.assert:
+    that:
+      - lab6_final_routes.stdout_lines[0] | length > 0
+    fail_msg: >-
+      {{ inventory_hostname }} no tiene rutas aprendidas por EIGRP.
+    success_msg: >-
+      {{ inventory_hostname }} tiene rutas EIGRP instaladas.
+
+- name: Probar conectividad hacia gateways LAN remotos
+  cisco.ios.ios_command:
+    commands:
+      - "ping {{ item }} repeat 3"
+  loop: "{{ lab6_final_remote_gateways }}"
+  loop_control:
+    label: "{{ item }}"
+  register: lab6_final_pings
+  changed_when: false
+
+- name: Validar conectividad end to end
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.stdout[0]
+        is search('Success rate is 100 percent')
+    fail_msg: >-
+      {{ inventory_hostname }} no alcanza
+      {{ item.item }}.
+    success_msg: >-
+      {{ inventory_hostname }} alcanza
+      {{ item.item }}.
+  loop: "{{ lab6_final_pings.results }}"
+  loop_control:
+    label: "{{ item.item }}"
