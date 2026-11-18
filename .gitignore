@@ -6,3 +6,6 @@ lab6-eigrp-cicd-pipeline/artifacts/backups/pre_change/*.cfg
 
 # Lab 6 - Snapshot temporal Batfish
 lab6-eigrp-cicd-pipeline/artifacts/batfish/snapshot/
+
+# Lab 6 - Resumen runtime generado por Jenkins
+lab6-eigrp-cicd-pipeline/artifacts/summary/
