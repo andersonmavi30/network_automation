@@ -341,7 +341,8 @@ def buildArtifactSummary() {
         script: """
             set -e
 
-            python3 "${env.LAB6_DIR}/scripts/build_artifact_summary.py" \
+            "${env.PYTHON_VENV}/bin/python" \
+                "${env.LAB6_DIR}/scripts/build_artifact_summary.py" \
                 --manifest "${env.LAB6_DIR}/artifacts/manifest.yml" \
                 --runtime-results "${env.RUNTIME_RESULTS}" \
                 --output "${env.SUMMARY_PATH}"
@@ -370,6 +371,8 @@ pipeline {
         AWX_URL = 'http://192.168.1.13:30143'
 
         LAB6_DIR = 'lab6-eigrp-cicd-pipeline'
+
+        PYTHON_VENV = '.jenkins-venv'
 
         RUNTIME_RESULTS =
             'lab6-eigrp-cicd-pipeline/artifacts/runtime_results.json'
@@ -408,6 +411,34 @@ pipeline {
                     currentBuild.description =
                         'Validación segura - sin ejecución AWX'
                 }
+            }
+        }
+
+        stage('Preparar entorno Python') {
+            steps {
+                sh(
+                    script: """
+                        set -e
+
+                        if [ ! -x "${env.PYTHON_VENV}/bin/python" ]; then
+                            python3 -m venv "${env.PYTHON_VENV}"
+                        fi
+
+                        if ! "${env.PYTHON_VENV}/bin/python" \
+                            -c "import yaml" \
+                            >/dev/null 2>&1; then
+
+                            "${env.PYTHON_VENV}/bin/python" \
+                                -m pip install \
+                                --disable-pip-version-check \
+                                --quiet \
+                                PyYAML
+                        fi
+
+                        "${env.PYTHON_VENV}/bin/python" \
+                            -c "import yaml; print('PyYAML disponible')"
+                    """
+                )
             }
         }
 
