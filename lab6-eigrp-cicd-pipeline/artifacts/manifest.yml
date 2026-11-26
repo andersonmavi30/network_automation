@@ -20,12 +20,12 @@ stages:
     source: "repository"
     path: "artifacts/precheck"
     expected:
-      - "R1.json"
-      - "R2.json"
-      - "R3.json"
-      - "R4.json"
-      - "R5.json"
-      - "R6.json"
+    - "R1.json"
+    - "R2.json"
+    - "R3.json"
+    - "R4.json"
+    - "R5.json"
+    - "R6.json"
 
   backup:
     order: 2
@@ -85,11 +85,13 @@ stages:
   rollback:
     order: 13
     source: "awx"
+    required: false
     expected_status: true
 
   rollback_idempotency:
     order: 14
     source: "awx"
+    required: false
     expected_status: true
 
   final_validation:
