@@ -1,0 +1,729 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurperClassic
+import groovy.transform.Field
+
+
+@Field Map runtimeStages = [:]
+
+@Field boolean deployStarted = false
+
+@Field Map templateDefinitions = [
+    precheck: [
+        id: 131,
+        name: 'Lab6 - Precheck'
+    ],
+    backup: [
+        id: 129,
+        name: 'Lab6 - Backup Pre-Change',
+        artifact: 'artifacts/backups/pre_change/backup_summary.json'
+    ],
+    batfish: [
+        id: 130,
+        name: 'Lab6 - Batfish Pre-Deploy',
+        artifact: 'artifacts/batfish/output/batfish_summary.json'
+    ],
+    deploy: [
+        id: 21,
+        name: 'Lab6 - EIGRP Deploy'
+    ],
+    convergence: [
+        id: 23,
+        name: 'Lab6 - EIGRP Convergence',
+        artifact: 'artifacts/convergence/convergence_summary.json'
+    ],
+    postcheck: [
+        id: 56,
+        name: 'Lab6 - Postcheck',
+        artifact: 'artifacts/postcheck/postcheck_summary.json'
+    ],
+    nornir: [
+        id: 89,
+        name: 'Lab6 - Nornir Validation',
+        artifact: 'artifacts/nornir/nornir_summary.json'
+    ],
+    pyats: [
+        id: 122,
+        name: 'Lab6 - pyATS Validation',
+        artifact: 'artifacts/pyats/pyats_summary.json'
+    ],
+    netconf: [
+        id: 123,
+        name: 'Lab6 - NETCONF YANG Validation',
+        artifact: 'artifacts/netconf/netconf_summary.json'
+    ],
+    restconf: [
+        id: 124,
+        name: 'Lab6 - RESTCONF YANG Validation',
+        artifact: 'artifacts/restconf/restconf_summary.json'
+    ],
+    failover: [
+        id: 125,
+        name: 'Lab6 - EIGRP Failover'
+    ],
+    reconvergence: [
+        id: 126,
+        name: 'Lab6 - EIGRP Reconvergence'
+    ],
+    rollback: [
+        id: 22,
+        name: 'Lab6 - Cleanup Rollback'
+    ],
+    rollback_idempotency: [
+        id: 127,
+        name: 'Lab6 - Rollback Idempotency Validation'
+    ],
+    final_validation: [
+        id: 128,
+        name: 'Lab6 - Final Validation'
+    ]
+]
+
+
+def writeRuntimeResults() {
+    def payload = [
+        lab: [
+            id: 'lab6',
+            name: 'EIGRP CI/CD Pipeline'
+        ],
+        generated_at: new Date().format(
+            "yyyy-MM-dd'T'HH:mm:ssXXX",
+            TimeZone.getTimeZone('UTC')
+        ),
+        stages: runtimeStages
+    ]
+
+    writeFile(
+        file: env.RUNTIME_RESULTS,
+        text: JsonOutput.prettyPrint(
+            JsonOutput.toJson(payload)
+        ) + "\n"
+    )
+}
+
+
+def initializeRuntimeResults() {
+    runtimeStages = [:]
+
+    templateDefinitions.each { stageName, definition ->
+        runtimeStages[stageName] = [
+            status: 'SKIPPED',
+            job_template: definition.name,
+            message: 'Etapa no ejecutada todavía.'
+        ]
+    }
+
+    writeRuntimeResults()
+}
+
+
+def markStage(
+    String stageName,
+    Map updates
+) {
+    runtimeStages[stageName] =
+        (runtimeStages[stageName] ?: [:]) + updates
+
+    writeRuntimeResults()
+}
+
+
+def awxLaunch(
+    Integer templateId
+) {
+    def response = withEnv(
+        [
+            "AWX_TEMPLATE_ID=${templateId}"
+        ]
+    ) {
+        sh(
+            returnStdout: true,
+            script: '''
+                set -e
+
+                curl --silent \
+                     --show-error \
+                     --fail \
+                     --request POST \
+                     --header "Authorization: Bearer ${AWX_TOKEN}" \
+                     --header "Content-Type: application/json" \
+                     --data '{}' \
+                     "${AWX_URL}/api/v2/job_templates/${AWX_TEMPLATE_ID}/launch/"
+            '''
+        ).trim()
+    }
+
+    return new JsonSlurperClassic().parseText(response)
+}
+
+
+def awxReadJob(
+    String jobId
+) {
+    def response = withEnv(
+        [
+            "AWX_JOB_ID=${jobId}"
+        ]
+    ) {
+        sh(
+            returnStdout: true,
+            script: '''
+                set -e
+
+                curl --silent \
+                     --show-error \
+                     --fail \
+                     --header "Authorization: Bearer ${AWX_TOKEN}" \
+                     "${AWX_URL}/api/v2/jobs/${AWX_JOB_ID}/"
+            '''
+        ).trim()
+    }
+
+    return new JsonSlurperClassic().parseText(response)
+}
+
+
+def runAwxStage(
+    String stageName,
+    Integer timeoutMinutes = 45
+) {
+    def definition = templateDefinitions[stageName]
+
+    if (!definition) {
+        error(
+            "No existe definición para la etapa: ${stageName}"
+        )
+    }
+
+    String awxJobId = null
+
+    try {
+        def launchData = awxLaunch(
+            definition.id as Integer
+        )
+
+        if (!launchData.job) {
+            throw new RuntimeException(
+                "AWX no devolvió el ID del Job para ${stageName}."
+            )
+        }
+
+        awxJobId = launchData.job.toString()
+
+        if (stageName == 'deploy') {
+            deployStarted = true
+        }
+
+        markStage(
+            stageName,
+            [
+                status: 'SKIPPED',
+                awx_job_id: awxJobId,
+                job_template: definition.name,
+                message: 'Job AWX lanzado; esperando resultado.'
+            ]
+        )
+
+        echo(
+            "Etapa ${stageName}: Job AWX ${awxJobId} lanzado."
+        )
+
+        timeout(
+            time: timeoutMinutes,
+            unit: 'MINUTES'
+        ) {
+            waitUntil(
+                initialRecurrencePeriod: 5000
+            ) {
+                def jobData = awxReadJob(
+                    awxJobId
+                )
+
+                def awxStatus = (
+                    jobData.status ?: 'unknown'
+                ).toString()
+
+                echo(
+                    "Etapa ${stageName}: estado AWX = ${awxStatus}"
+                )
+
+                if (awxStatus == 'successful') {
+                    return true
+                }
+
+                if (
+                    awxStatus in [
+                        'failed',
+                        'error',
+                        'canceled',
+                        'cancelled'
+                    ]
+                ) {
+                    throw new RuntimeException(
+                        "El Job AWX terminó con estado ${awxStatus}."
+                    )
+                }
+
+                return false
+            }
+        }
+
+        def completedStage = [
+            status: 'SUCCESS',
+            awx_job_id: awxJobId,
+            job_template: definition.name,
+            message: 'Job AWX finalizado correctamente.'
+        ]
+
+        if (definition.artifact) {
+            completedStage.artifact =
+                definition.artifact
+        }
+
+        markStage(
+            stageName,
+            completedStage
+        )
+
+        echo(
+            "Etapa ${stageName}: finalizada correctamente."
+        )
+
+    } catch (Throwable err) {
+        def message = (
+            err.getMessage() ?: err.toString()
+        )
+
+        def failedStage = [
+            status: 'FAILURE',
+            job_template: definition.name,
+            message: message
+        ]
+
+        if (awxJobId) {
+            failedStage.awx_job_id =
+                awxJobId
+        }
+
+        markStage(
+            stageName,
+            failedStage
+        )
+
+        error(
+            "La etapa ${stageName} falló: ${message}"
+        )
+    }
+}
+
+
+def runPipelineStage(
+    String stageName,
+    Integer timeoutMinutes = 45
+) {
+    withCredentials(
+        [
+            string(
+                credentialsId: 'awx-api-token',
+                variable: 'AWX_TOKEN'
+            )
+        ]
+    ) {
+        runAwxStage(
+            stageName,
+            timeoutMinutes
+        )
+    }
+}
+
+
+def buildArtifactSummary() {
+    sh(
+        script: """
+            set -e
+
+            python3 "${env.LAB6_DIR}/scripts/build_artifact_summary.py" \
+                --manifest "${env.LAB6_DIR}/artifacts/manifest.yml" \
+                --runtime-results "${env.RUNTIME_RESULTS}" \
+                --output "${env.SUMMARY_PATH}"
+        """
+    )
+}
+
+
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    parameters {
+        booleanParam(
+            name: 'EXECUTE_PIPELINE',
+            defaultValue: false,
+            description: 'Activar únicamente para ejecutar etapas reales en AWX'
+        )
+    }
+
+    environment {
+        AWX_URL = 'http://192.168.1.13:30143'
+
+        LAB6_DIR = 'lab6-eigrp-cicd-pipeline'
+
+        RUNTIME_RESULTS =
+            'lab6-eigrp-cicd-pipeline/artifacts/runtime_results.json'
+
+        SUMMARY_PATH =
+            'lab6-eigrp-cicd-pipeline/artifacts/summary/lab6_summary.json'
+    }
+
+    stages {
+
+        stage('Inicializar resultados') {
+            steps {
+                script {
+                    initializeRuntimeResults()
+
+                    echo(
+                        "EXECUTE_PIPELINE = ${params.EXECUTE_PIPELINE}"
+                    )
+                }
+            }
+        }
+
+        stage('Modo seguro') {
+            when {
+                expression {
+                    return !params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    echo(
+                        'Modo seguro activo: no se lanzarán Jobs en AWX.'
+                    )
+
+                    currentBuild.description =
+                        'Validación segura - sin ejecución AWX'
+                }
+            }
+        }
+
+        stage('Precheck') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'precheck'
+                    )
+                }
+            }
+        }
+
+        stage('Backup pre-change') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'backup'
+                    )
+                }
+            }
+        }
+
+        stage('Batfish pre-deploy') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'batfish'
+                    )
+                }
+            }
+        }
+
+        stage('Deploy EIGRP') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'deploy'
+                    )
+                }
+            }
+        }
+
+        stage('Convergence') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'convergence'
+                    )
+                }
+            }
+        }
+
+        stage('Postcheck') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'postcheck'
+                    )
+                }
+            }
+        }
+
+        stage('Nornir validation') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'nornir'
+                    )
+                }
+            }
+        }
+
+        stage('pyATS validation') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'pyats'
+                    )
+                }
+            }
+        }
+
+        stage('NETCONF validation') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'netconf'
+                    )
+                }
+            }
+        }
+
+        stage('RESTCONF validation') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'restconf'
+                    )
+                }
+            }
+        }
+
+        stage('Failover') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'failover'
+                    )
+                }
+            }
+        }
+
+        stage('Reconvergence') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'reconvergence'
+                    )
+                }
+            }
+        }
+
+        stage('Final validation') {
+            when {
+                expression {
+                    return params.EXECUTE_PIPELINE
+                }
+            }
+
+            steps {
+                script {
+                    runPipelineStage(
+                        'final_validation'
+                    )
+                }
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo(
+                'Pipeline principal de Jenkins finalizado correctamente.'
+            )
+        }
+
+        failure {
+            script {
+                echo(
+                    'El pipeline principal terminó con errores.'
+                )
+
+                if (
+                    params.EXECUTE_PIPELINE &&
+                    deployStarted
+                ) {
+                    echo(
+                        'Se detectó un fallo después de iniciar el Deploy.'
+                    )
+
+                    withCredentials(
+                        [
+                            string(
+                                credentialsId: 'awx-api-token',
+                                variable: 'AWX_TOKEN'
+                            )
+                        ]
+                    ) {
+                        try {
+                            echo(
+                                'Lanzando Cleanup Rollback en AWX.'
+                            )
+
+                            runAwxStage(
+                                'rollback',
+                                30
+                            )
+
+                        } catch (Throwable err) {
+                            echo(
+                                "Cleanup Rollback falló: " +
+                                "${err.getMessage()}"
+                            )
+                        }
+
+                        try {
+                            echo(
+                                'Lanzando validación de idempotencia.'
+                            )
+
+                            runAwxStage(
+                                'rollback_idempotency',
+                                30
+                            )
+
+                        } catch (Throwable err) {
+                            echo(
+                                "Rollback Idempotency falló: " +
+                                "${err.getMessage()}"
+                            )
+                        }
+                    }
+
+                } else {
+                    echo(
+                        'No se ejecuta rollback porque el Deploy ' +
+                        'no llegó a iniciar.'
+                    )
+                }
+            }
+        }
+
+        always {
+            script {
+                try {
+                    buildArtifactSummary()
+
+                    archiveArtifacts(
+                        artifacts:
+                            "${env.RUNTIME_RESULTS}," +
+                            "${env.SUMMARY_PATH}",
+                        allowEmptyArchive: false,
+                        fingerprint: true
+                    )
+
+                    echo(
+                        'Artifacts de Lab 6 archivados correctamente.'
+                    )
+
+                } catch (Throwable err) {
+                    echo(
+                        'No fue posible construir o archivar el resumen: ' +
+                        "${err.getMessage()}"
+                    )
+
+                    currentBuild.result = 'FAILURE'
+                }
+
+                echo(
+                    'Fin de la integración Jenkins → AWX.'
+                )
+            }
+        }
+    }
+}
