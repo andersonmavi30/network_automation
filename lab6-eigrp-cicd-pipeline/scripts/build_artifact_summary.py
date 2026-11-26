@@ -41,7 +41,7 @@ def load_runtime_results(
     """
     Carga resultados producidos por Jenkins.
 
-    Si el archivo aun no existe, devuelve un diccionario vacio.
+    Si el archivo aún no existe, devuelve un diccionario vacío.
     """
 
     if path is None:
@@ -143,6 +143,12 @@ def build_stage_results(
             "source": stage_definition.get(
                 "source"
             ),
+            "required": bool(
+                stage_definition.get(
+                    "required",
+                    True,
+                )
+            ),
             "status": status,
         }
 
@@ -192,7 +198,13 @@ def build_stage_results(
 def calculate_pipeline_status(
     stage_results: dict[str, Any],
 ) -> str:
-    """Calcula SUCCESS/FAILURE/SKIPPED global."""
+    """
+    Calcula el estado global del pipeline.
+
+    Las etapas opcionales pueden quedar en SKIPPED durante
+    una ejecución exitosa. Una etapa opcional en FAILURE
+    sigue provocando FAILURE global.
+    """
 
     statuses = [
         stage[
@@ -204,9 +216,20 @@ def calculate_pipeline_status(
     if "FAILURE" in statuses:
         return "FAILURE"
 
-    if statuses and all(
+    required_statuses = [
+        stage[
+            "status"
+        ]
+        for stage in stage_results.values()
+        if stage.get(
+            "required",
+            True,
+        )
+    ]
+
+    if required_statuses and all(
         status == "SUCCESS"
-        for status in statuses
+        for status in required_statuses
     ):
         return "SUCCESS"
 
