@@ -351,6 +351,30 @@ def buildArtifactSummary() {
 }
 
 
+def sendPipelineNotification(
+    String pipelineStatus
+) {
+    def emailArguments = [
+        to: 'andersonmavi30@gmail.com',
+        subject:
+            "Lab 6 EIGRP - ${pipelineStatus} - " +
+            "${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body: """Lab 6 - EIGRP CI/CD Pipeline
+
+Estado: ${pipelineStatus}
+Job: ${env.JOB_NAME}
+Build: #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}
+
+El resumen completo queda archivado como artifact en Jenkins.
+""",
+        mimeType: 'text/plain'
+    ]
+
+    emailext(emailArguments)
+}
+
+
 pipeline {
     agent any
 
@@ -654,9 +678,26 @@ pipeline {
     post {
 
         success {
-            echo(
-                'Pipeline principal de Jenkins finalizado correctamente.'
-            )
+            script {
+                echo(
+                    'Pipeline principal de Jenkins finalizado correctamente.'
+                )
+
+                try {
+                    sendPipelineNotification(
+                        'SUCCESS'
+                    )
+
+                    echo(
+                        'Notificación SUCCESS enviada por correo.'
+                    )
+                } catch (Throwable err) {
+                    echo(
+                        'No fue posible enviar el correo SUCCESS: ' +
+                        "${err.getMessage()}"
+                    )
+                }
+            }
         }
 
         failure {
@@ -720,6 +761,21 @@ pipeline {
                     echo(
                         'No se ejecuta rollback porque el Deploy ' +
                         'no llegó a iniciar.'
+                    )
+                }
+
+                try {
+                    sendPipelineNotification(
+                        'FAILURE'
+                    )
+
+                    echo(
+                        'Notificación FAILURE enviada por correo.'
+                    )
+                } catch (Throwable err) {
+                    echo(
+                        'No fue posible enviar el correo FAILURE: ' +
+                        "${err.getMessage()}"
                     )
                 }
             }
