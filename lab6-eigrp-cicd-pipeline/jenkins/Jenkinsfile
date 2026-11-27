@@ -366,7 +366,7 @@ Job: ${env.JOB_NAME}
 Build: #${env.BUILD_NUMBER}
 URL: ${env.BUILD_URL}
 
-El resumen JSON de la ejecución se adjunta al correo.
+El resumen completo queda archivado como artifact en Jenkins.
 """,
         mimeType: 'text/plain'
     ]
