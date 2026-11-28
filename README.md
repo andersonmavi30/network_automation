@@ -208,3 +208,17 @@ This project is licensed under the [MIT License](LICENSE).
 - `AGENTS.md` — detailed guide for AI agents (structure, commands, conventions).
 - `lab4-ospf-ansible-pipeline/README.md` — full Lab 4 addressing and topology.
 - `docs/lab4/` — phase documentation (e.g. NetBox dynamic inventory).
+
+
+---
+
+## 🧭 Current repository scope
+
+End-to-end Network Automation and NetDevOps labs integrating Ansible, AWX, Jenkins, NetBox, Batfish and multi-vendor workflows.
+
+This README is kept aligned with the repository’s current implementation and documentation structure. Contributions, experiments and improvements should preserve reproducibility, security and clear operational intent.
+
+## ✍️ Author
+
+**Anderson Martinez Virviescas**  
+*Network Administrator | Firewall Administrator | Linux Administrator | NetDevOps - Network Automation Specialist*
